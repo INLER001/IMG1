@@ -1,0 +1,4117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>甄别</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <link rel="icon" type="image/png" sizes="32x32" href="https://i.imgs.ovh/2026/06/06/f9023e1e21fe386fe27c023cf310de93.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://i.imgs.ovh/2026/06/06/280dcab62a105ea80fcf213e897c8dfc.png">
+    <style>
+        /* 基础重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 字体定义 - 微软雅黑正式风格 */
+        :root {
+            --color-red: #E63946;
+            --color-black: #0A0A0A;
+            --color-dark: #121212;
+            --color-gray: #1A1A1A;
+            --color-light-gray: #2A2A2A;
+            --color-text: #E0E0E0;
+            --color-text-muted: #888888;
+            --font-display: 'Microsoft YaHei', 'Microsoft YaHei UI', 'Arial Black', 'Impact', sans-serif;
+            --font-mono: 'Consolas', 'Courier New', 'Microsoft YaHei', monospace;
+            --font-sans: 'Microsoft YaHei', 'Microsoft YaHei UI', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        /* 背景 - 深色主题 + 光效纹理 */
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--color-black);
+            color: var(--color-text);
+            line-height: 1.6;
+            position: relative;
+            overflow-x: hidden;
+            /* 全局背景图片 */
+            background-image: url('https://i.imgs.ovh/2026/06/06/4147321eab95e2932d3c316a7e4b4bd9.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }
+
+        /* 全局暗沉叠加层 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 10, 0.75);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 网格纹理（位于暗沉层之上） */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(230, 57, 70, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(230, 57, 70, 0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* 容器 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ==================== 横幅效果 ==================== */
+        .hero-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(135deg, var(--color-black) 0%, var(--color-dark) 50%, var(--color-black) 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease;
+            transform: translateY(0);
+            opacity: 1;
+            overflow: hidden;
+        }
+
+        .hero-bg-symbol {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 800px;
+            color: #E63946;
+            opacity: 0.08;
+            z-index: -1;
+            animation: symbolFloat 10s ease-in-out infinite;
+            pointer-events: none;
+            text-shadow: 
+                0 0 15px rgba(230, 57, 70, 0.6),
+                0 0 30px rgba(230, 57, 70, 0.4),
+                0 0 45px rgba(230, 57, 70, 0.2);
+        }
+
+        @keyframes symbolFloat {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg) scale(1);
+                opacity: 0.05;
+                filter: brightness(1);
+            }
+            50% {
+                transform: translate(-50%, -50%) rotate(1deg) scale(1.15);
+                opacity: 0.12;
+                filter: brightness(1.2);
+            }
+            100% {
+                transform: translate(-50%, -50%) rotate(0deg) scale(1);
+                opacity: 0.05;
+                filter: brightness(1);
+            }
+        }
+
+        .hero-overlay.hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .hero-content {
+            text-align: center;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero-logo {
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--color-red) 0%, var(--color-black) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 4px solid var(--color-red);
+            box-shadow: 0 0 80px rgba(230, 57, 70, 0.4);
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 60px rgba(230, 57, 70, 0.4); }
+            50% { box-shadow: 0 0 100px rgba(230, 57, 70, 0.6); }
+        }
+
+        .hero-logo span {
+            font-family: var(--font-display);
+            font-size: 48px;
+            color: white;
+        }
+
+        .hero-logo img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: 56px;
+            text-transform: uppercase;
+            letter-spacing: 12px;
+            color: var(--color-text);
+            margin-bottom: 15px;
+        }
+
+        .hero-subtitle {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            letter-spacing: 6px;
+            color: var(--color-red);
+            text-transform: uppercase;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .scroll-text {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 3px;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+        }
+
+        .scroll-arrow {
+            width: 20px;
+            height: 35px;
+            border: 2px solid var(--color-red);
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .scroll-arrow::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 10px;
+            background: var(--color-red);
+            border-radius: 2px;
+            animation: scrollDown 1.5s ease-in-out infinite;
+        }
+
+        @keyframes scrollDown {
+            0% { transform: translateX(-50%) translateY(0); opacity: 1; }
+            100% { transform: translateX(-50%) translateY(15px); opacity: 0; }
+        }
+
+        /* ==================== 头部区域 ==================== */
+        header {
+            padding: 100px 0 80px;
+            text-align: center;
+            position: relative;
+            background: linear-gradient(to bottom, var(--color-black) 0%, var(--color-dark) 100%);
+            overflow: hidden;
+        }
+
+        /* 头部流光动态背景效果 */
+        .hero-light-streak {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .hero-light-streak::before,
+        .hero-light-streak::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 20%,
+                rgba(230, 57, 70, 0.06) 45%,
+                rgba(230, 57, 70, 0.12) 50%,
+                rgba(230, 57, 70, 0.06) 55%,
+                transparent 80%
+            );
+            animation: heroLightStreak 8s ease-in-out infinite;
+        }
+
+        .hero-light-streak::after {
+            background: linear-gradient(
+                -45deg,
+                transparent 30%,
+                rgba(230, 57, 70, 0.04) 50%,
+                transparent 70%
+            );
+            animation: heroLightStreak2 12s ease-in-out infinite;
+            animation-delay: -4s;
+        }
+
+        @keyframes heroLightStreak {
+            0%, 100% {
+                transform: translateX(-30%) translateY(-30%) rotate(0deg);
+                opacity: 0.5;
+            }
+            50% {
+                transform: translateX(30%) translateY(30%) rotate(5deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes heroLightStreak2 {
+            0%, 100% {
+                transform: translateX(20%) translateY(-20%) rotate(0deg);
+                opacity: 0.3;
+            }
+            50% {
+                transform: translateX(-20%) translateY(20%) rotate(-3deg);
+                opacity: 0.7;
+            }
+        }
+
+        /* 头部装饰 */
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--color-red), transparent);
+        }
+
+        /* 头像 */
+        .avatar {
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 30px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--color-red) 0%, var(--color-black) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 4px solid var(--color-red);
+            box-shadow: 0 0 40px rgba(230, 57, 70, 0.3), 8px 8px 0 rgba(230, 57, 70, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .avatar::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            right: -8px;
+            bottom: -8px;
+            border-radius: 50%;
+            border: 1px solid rgba(230, 57, 70, 0.2);
+        }
+
+        .avatar:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 0 60px rgba(230, 57, 70, 0.5), 12px 12px 0 rgba(230, 57, 70, 0.3);
+        }
+
+        .avatar-text {
+            font-family: var(--font-display);
+            font-size: 56px;
+            color: white;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(230, 57, 70, 0.5);
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        /* 姓名 */
+        h1 {
+            font-family: var(--font-display);
+            font-size: 52px;
+            text-transform: uppercase;
+            letter-spacing: 10px;
+            margin-bottom: 15px;
+            color: var(--color-text);
+            position: relative;
+        }
+
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background: var(--color-red);
+        }
+
+        /* 职业标签 */
+        .title {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            letter-spacing: 6px;
+            color: var(--color-red);
+            text-transform: uppercase;
+            margin-bottom: 25px;
+        }
+
+        /* 格言链接 */
+        .motto-link {
+            font-family: var(--font-mono);
+            font-style: italic;
+            font-size: 14px;
+            color: var(--color-text-muted);
+            margin-bottom: 40px;
+            display: inline-block;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .motto-link:hover {
+            color: var(--color-primary);
+            transform: translateY(-2px);
+        }
+
+        .motto-quote {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .motto-source {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        /* 社交链接 */
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .social-links a {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--color-text-muted);
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            padding-bottom: 5px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+        }
+
+        .social-links a::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--color-red);
+            transition: width 0.3s ease;
+        }
+
+        .social-links a:hover {
+            color: var(--color-red);
+        }
+
+        .social-links a:hover::before {
+            width: 100%;
+        }
+
+        /* ==================== 微信公众号弹窗 ==================== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px) scale(0.95); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+
+        .modal-content {
+            background: linear-gradient(145deg, #1a1a1a 0%, #121212 50%, #0a0a0a 100%);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 420px;
+            width: 90%;
+            position: relative;
+            box-shadow: 
+                0 0 40px rgba(230, 57, 70, 0.15),
+                0 25px 50px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(230, 57, 70, 0.2);
+            animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: rgba(230, 57, 70, 0.1);
+            color: var(--color-text-muted);
+            font-size: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            background: rgba(230, 57, 70, 0.3);
+            color: var(--color-red);
+            transform: rotate(90deg);
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(230, 57, 70, 0.1);
+        }
+
+        .modal-header h3 {
+            font-family: var(--font-display);
+            font-size: 24px;
+            color: var(--color-text);
+            margin: 0;
+            letter-spacing: 4px;
+            position: relative;
+        }
+
+        .modal-header h3::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--color-red), transparent);
+        }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .qrcode-container {
+            position: relative;
+            padding: 20px;
+        }
+
+        .qrcode-frame {
+            background: #ffffff;
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .qrcode-image {
+            width: 220px;
+            height: 220px;
+            display: block;
+            border-radius: 8px;
+        }
+
+        .qr-corner {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--color-red);
+            border-radius: 4px;
+        }
+
+        .qr-corner-tl {
+            top: 24px;
+            left: 24px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .qr-corner-tr {
+            top: 24px;
+            right: 24px;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .qr-corner-bl {
+            bottom: 24px;
+            left: 24px;
+            border-right: none;
+            border-top: none;
+        }
+
+        .qr-corner-br {
+            bottom: 24px;
+            right: 24px;
+            border-left: none;
+            border-top: none;
+        }
+
+        .qrcode-text {
+            font-family: var(--font-sans);
+            font-size: 16px;
+            color: var(--color-text);
+            text-align: center;
+            margin: 0;
+            letter-spacing: 2px;
+            padding: 15px 30px;
+            background: rgba(230, 57, 70, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(230, 57, 70, 0.1);
+        }
+
+        .modal-footer {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(230, 57, 70, 0.1);
+        }
+
+        .modal-hint {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--color-text-muted);
+            letter-spacing: 1px;
+        }
+
+        .modal-link {
+            color: var(--color-red);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+            padding: 4px 12px;
+            border: 1px solid var(--color-red);
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        .modal-link:hover {
+            background: var(--color-red);
+            color: white;
+        }
+
+        /* ==================== 隐私政策弹窗样式 ==================== */
+    .privacy-content {
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+    
+    .privacy-content h4 {
+        color: #00d4ff;
+        margin-top: 20px;
+        margin-bottom: 10px;
+        font-size: 16px;
+        border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+        padding-bottom: 8px;
+    }
+    
+    .privacy-content h4:first-child {
+        margin-top: 0;
+    }
+    
+    .privacy-content p {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 14px;
+        line-height: 1.8;
+        margin-bottom: 10px;
+        text-align: justify;
+    }
+    
+    .privacy-date {
+        text-align: right !important;
+        color: rgba(255, 255, 255, 0.5) !important;
+        font-size: 12px !important;
+        margin-top: 20px !important;
+        padding-top: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+/* ==================== 联系我弹窗样式 ==================== */
+    .contact-modal-content {
+            max-width: 700px;
+            width: 90%;
+        }
+
+        .contact-body {
+            display: flex;
+            gap: 30px;
+            padding: 20px 0;
+        }
+
+        .contact-qrcodes {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+
+        .contact-qr-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qrcode-label {
+            font-family: var(--font-sans);
+            font-size: 12px;
+            color: var(--color-text-muted);
+            margin: 0;
+            letter-spacing: 1px;
+        }
+
+        .qrcode-image-wechat {
+            width: 120px;
+            height: 160px; /* 3:4 比例 */
+            object-fit: cover;
+        }
+
+        .qrcode-image-qq {
+            width: 120px;
+            height: 213px; /* 9:16 比例 */
+            object-fit: cover;
+        }
+
+        .contact-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding-top: 10px;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            background: rgba(230, 57, 70, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(230, 57, 70, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .contact-item:hover {
+            background: rgba(230, 57, 70, 0.1);
+            border-color: rgba(230, 57, 70, 0.3);
+        }
+
+        .contact-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .contact-label {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--color-text-muted);
+            letter-spacing: 1px;
+            width: 60px;
+            flex-shrink: 0;
+        }
+
+        .contact-value {
+            font-family: var(--font-sans);
+            font-size: 14px;
+            color: var(--color-text);
+            font-weight: 500;
+        }
+
+        /* ==================== 六宫格板块布局 ==================== */
+        .sections-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            padding: 80px 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            background: 
+                linear-gradient(135deg, rgba(10, 10, 10, 0.6) 0%, rgba(18, 18, 18, 0.6) 30%, rgba(10, 10, 10, 0.6) 60%, rgba(18, 18, 18, 0.6) 100%),
+                linear-gradient(225deg, rgba(230, 57, 70, 0.015) 0%, transparent 50%);
+            overflow: hidden;
+        }
+        
+        /* 先锋艺术装饰元素 - 几何形状 */
+        .sections-grid::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 300px;
+            height: 300px;
+            border: 2px solid rgba(230, 57, 70, 0.1);
+            transform: rotate(45deg);
+            animation: rotateSlow 60s linear infinite;
+            z-index: 0;
+        }
+
+        .sections-grid::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            left: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(230, 57, 70, 0.08) 0%, transparent 70%);
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            animation: pulseArt 15s ease-in-out infinite;
+            z-index: 0;
+        }
+
+        /* 对角线装饰 */
+        .sections-grid .diagonal-line {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent, rgba(230, 57, 70, 0.15), transparent);
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+
+        /* 三角形装饰元素 */
+        .sections-grid .triangle-1 {
+            position: absolute;
+            top: 20%;
+            left: 10%;
+            width: 0;
+            height: 0;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+            border-bottom: 50px solid rgba(230, 57, 70, 0.1);
+            animation: floatTriangle 12s ease-in-out infinite;
+            z-index: 0;
+        }
+
+        .sections-grid .triangle-2 {
+            position: absolute;
+            bottom: 30%;
+            right: 15%;
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 35px solid rgba(230, 57, 70, 0.08);
+            animation: floatTriangle 15s ease-in-out infinite reverse;
+            z-index: 0;
+        }
+
+        /* 方块装饰 */
+        .sections-grid .square-1 {
+            position: absolute;
+            top: 40%;
+            right: 5%;
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(230, 57, 70, 0.2);
+            transform: rotate(15deg);
+            animation: rotateSquare 20s linear infinite;
+            z-index: 0;
+        }
+
+        .sections-grid .square-2 {
+            position: absolute;
+            bottom: 15%;
+            left: 5%;
+            width: 25px;
+            height: 25px;
+            background: rgba(230, 57, 70, 0.05);
+            transform: rotate(-30deg);
+            animation: rotateSquare 25s linear infinite reverse;
+            z-index: 0;
+        }
+
+        /* 圆形装饰 */
+        .sections-grid .circle-1 {
+            position: absolute;
+            top: 10%;
+            left: 30%;
+            width: 60px;
+            height: 60px;
+            border: 1px dashed rgba(230, 57, 70, 0.1);
+            border-radius: 50%;
+            animation: pulseCircle 8s ease-in-out infinite;
+            z-index: 0;
+        }
+
+        .sections-grid .circle-2 {
+            position: absolute;
+            bottom: 10%;
+            right: 35%;
+            width: 30px;
+            height: 30px;
+            background: rgba(230, 57, 70, 0.1);
+            border-radius: 50%;
+            animation: pulseCircle 10s ease-in-out infinite reverse;
+            z-index: 0;
+        }
+
+        /* 动画关键帧 */
+        @keyframes rotateSlow {
+            from { transform: rotate(45deg); }
+            to { transform: rotate(405deg); }
+        }
+
+        @keyframes pulseArt {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        @keyframes floatTriangle {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+
+        @keyframes rotateSquare {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulseCircle {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.3); opacity: 0.8; }
+        }
+
+        /* 错落有致的布局 - 奇数项稍微偏移 */
+        .sections-grid > section:nth-child(odd) {
+            transform: translateY(0);
+        }
+
+        .sections-grid > section:nth-child(even) {
+            transform: translateY(40px);
+        }
+
+        /* 板块通用样式 */
+        section {
+            padding: 45px 35px;
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(145deg, var(--color-gray) 0%, var(--color-dark) 100%);
+            border: 1px solid rgba(230, 57, 70, 0.1);
+            border-radius: 4px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        section:hover {
+            transform: translateY(-12px) scale(1.02);
+            border-color: rgba(230, 57, 70, 0.4);
+            box-shadow: 
+                0 25px 50px rgba(0, 0, 0, 0.5),
+                0 0 40px rgba(230, 57, 70, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        /* 板块光效边框 */
+        section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(230, 57, 70, 0.05) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+
+        section:hover::before {
+            opacity: 1;
+        }
+
+        /* 板块顶部红线 */
+        section::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--color-red), transparent);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        section:hover::after {
+            transform: scaleX(1);
+        }
+
+        /* 板块标题 */
+        .section-header {
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .section-number {
+            font-family: var(--font-display);
+            font-size: 48px;
+            color: rgba(230, 57, 70, 0.12);
+            line-height: 1;
+            position: absolute;
+            left: -15px;
+            top: -15px;
+            z-index: 0;
+            transition: color 0.3s ease;
+        }
+
+        section:hover .section-number {
+            color: rgba(230, 57, 70, 0.25);
+        }
+
+        .section-title-wrap {
+            position: relative;
+            z-index: 1;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            color: var(--color-text);
+            position: relative;
+            padding-bottom: 12px;
+            transition: color 0.3s ease;
+        }
+
+        section:hover .section-title {
+            color: var(--color-red);
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 2px;
+            background: var(--color-red);
+            box-shadow: 0 0 10px rgba(230, 57, 70, 0.5);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        section:hover .section-title::after {
+            transform: scaleX(1);
+        }
+
+        /* 装饰几何元素 */
+        .section-title::before {
+            content: '';
+            position: absolute;
+            right: -35px;
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--color-red);
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+
+        section:hover .section-title::before {
+            opacity: 0.6;
+            transform: translateY(-50%) rotate(45deg) scale(1.1);
+        }
+
+        /* 查看更多链接 */
+        .view-all {
+            display: inline-flex;
+            align-items: center;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--color-red);
+            text-decoration: none;
+            margin-top: 25px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            gap: 8px;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        section:hover .view-all {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .view-all::after {
+            content: '→';
+            transition: margin-left 0.3s ease;
+        }
+
+        .view-all:hover {
+            gap: 12px;
+        }
+
+        /* ==================== Works - 作品板块 ==================== */
+        .works-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .work-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .work-card:hover {
+            border-color: rgba(230, 57, 70, 0.3);
+            background: rgba(230, 57, 70, 0.03);
+        }
+
+        .work-image {
+            height: 80px;
+            background: linear-gradient(135deg, var(--color-light-gray) 0%, var(--color-gray) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+
+        .work-image span {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .work-card h3 {
+            font-family: var(--font-display);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            color: var(--color-text);
+        }
+
+        .work-card p {
+            font-size: 11px;
+            color: var(--color-text-muted);
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* ==================== Writings - 文章板块 ==================== */
+        .writings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .writing-item {
+            padding: 12px 15px;
+            border-left: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .writing-item:hover {
+            border-left-color: var(--color-red);
+            background: rgba(230, 57, 70, 0.05);
+            padding-left: 20px;
+        }
+
+        .writing-item h3 {
+            font-family: var(--font-display);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .writing-item h3 a {
+            color: var(--color-text);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .writing-item h3 a:hover {
+            color: var(--color-red);
+        }
+
+        .writing-meta {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--color-text-muted);
+            letter-spacing: 1px;
+        }
+
+        /* ==================== Videos - 视频板块 ==================== */
+        .videos-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .video-item {
+            transition: all 0.3s ease;
+            background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .video-thumbnail {
+            height: 70px;
+            background: linear-gradient(135deg, var(--color-light-gray) 0%, var(--color-gray) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .video-thumbnail:hover {
+            border-color: rgba(230, 57, 70, 0.3);
+            background: rgba(230, 57, 70, 0.05);
+        }
+
+        .video-thumbnail::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+
+        .video-thumbnail:hover::before {
+            opacity: 1;
+        }
+
+        .video-thumbnail::after {
+            content: '▶';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.9);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 2;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+
+        .video-thumbnail:hover::after {
+            opacity: 1;
+        }
+
+        .video-thumbnail span {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .video-item h3 {
+            font-family: var(--font-display);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--color-text);
+            padding: 0 10px 10px;
+            margin: 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* ==================== Gallery - 画廊板块 ==================== */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .gallery-item {
+            aspect-ratio: 3/4;
+            background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            border-color: rgba(230, 57, 70, 0.3);
+            transform: scale(1.02);
+        }
+
+        .gallery-image {
+            flex: 1;
+            background-color: var(--color-gray);
+            background-image: none;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gallery-image::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(230, 57, 70, 0.1) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .gallery-item:hover .gallery-image::after {
+            opacity: 1;
+        }
+
+        .gallery-image span {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .gallery-item p {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--color-text-muted);
+            letter-spacing: 1px;
+            padding: 10px;
+            text-align: center;
+            margin: 0;
+        }
+
+        /* ==================== Footprints - 足迹板块 - 中国地图 ==================== */
+        .footprints-grid {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            aspect-ratio: 1;
+            background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            padding: 20px;
+        }
+
+        .china-map {
+            width: 100%;
+            height: 100%;
+            min-height: 400px;
+        }
+
+        .china-map svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-background path,
+        .map-background ellipse {
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        .map-background path:hover,
+        .map-background ellipse:hover {
+            opacity: 1;
+        }
+
+        .province {
+            fill: rgba(230, 57, 70, 0.3);
+            stroke: var(--color-red);
+            stroke-width: 1.5;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .province:hover {
+            fill: var(--color-red);
+            stroke-width: 2;
+            transform: scale(1.3);
+            filter: drop-shadow(0 0 8px rgba(230, 57, 70, 0.8));
+        }
+
+        .province.active {
+            fill: var(--color-red);
+            stroke-width: 2;
+            filter: drop-shadow(0 0 6px rgba(230, 57, 70, 0.6));
+        }
+
+        .province-label {
+            fill: var(--color-text-muted);
+            font-family: var(--font-sans);
+            font-size: 11px;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+        }
+
+        /* ==================== Reviews - 测评板块 ==================== */
+        .reviews-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .review-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            aspect-ratio: 2/3;
+            position: relative;
+        }
+
+        .review-card:hover {
+            border-color: rgba(230, 57, 70, 0.3);
+            background: rgba(230, 57, 70, 0.05);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(230, 57, 70, 0.15);
+        }
+
+        .review-cover {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .review-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 12px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(10px);
+        }
+
+        .review-card:hover .review-content {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .review-category {
+            font-family: var(--font-mono);
+            font-size: 8px;
+            color: var(--color-red);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .review-card h3 {
+            font-family: var(--font-display);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--color-text);
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.4;
+        }
+
+        .review-rating {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            letter-spacing: 0;
+        }
+
+        .star {
+            color: #FFD700;
+            font-size: 14px;
+            opacity: 0.6;
+        }
+
+        .star.filled {
+            opacity: 1;
+        }
+
+        /* ==================== 页脚 ==================== */
+        footer {
+            padding: 60px 0;
+            background: var(--color-black);
+            position: relative;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* 页脚装饰 */
+        footer::before {
+            content: '';
+            position: absolute;
+            bottom: 30px;
+            right: 10%;
+            width: 50px;
+            height: 50px;
+            border: 2px solid rgba(230, 57, 70, 0.3);
+            transform: rotate(30deg);
+        }
+
+        footer::after {
+            content: '';
+            position: absolute;
+            bottom: 50px;
+            right: calc(10% + 60px);
+            width: 20px;
+            height: 20px;
+            background: var(--color-red);
+            opacity: 0.6;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+
+        .copyright {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--color-text-muted);
+            letter-spacing: 2px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 30px;
+        }
+
+        .footer-links a {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--color-text-muted);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .footer-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: var(--color-red);
+            transition: width 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--color-red);
+        }
+
+        .footer-links a:hover::after {
+            width: 100%;
+        }
+
+        /* ==================== 设备类型特定样式 ==================== */
+        /* 桌面端 (屏幕宽度 > 1024px) */
+        .device-desktop .hero-title {
+            font-size: 64px;
+            letter-spacing: 16px;
+        }
+
+        .device-desktop .hero-subtitle {
+            letter-spacing: 8px;
+        }
+
+        /* 平板端 (屏幕宽度 769px - 1024px) */
+        .device-tablet .hero-title {
+            font-size: 44px;
+            letter-spacing: 10px;
+        }
+
+        .device-tablet .hero-logo {
+            width: 100px;
+            height: 100px;
+        }
+
+        .device-tablet .hero-logo span {
+            font-size: 36px;
+        }
+
+        .device-tablet h1 {
+            font-size: 40px;
+            letter-spacing: 8px;
+        }
+
+        .device-tablet .works-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .device-tablet .gallery-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        /* 移动端 (屏幕宽度 <= 768px) */
+        .device-mobile .hero-title {
+            font-size: 30px;
+            letter-spacing: 5px;
+        }
+
+        .device-mobile .hero-logo {
+            width: 80px;
+            height: 80px;
+        }
+
+        .device-mobile .hero-logo span {
+            font-size: 28px;
+        }
+
+        .device-mobile .hero-subtitle {
+            font-size: 11px;
+            letter-spacing: 3px;
+        }
+
+        .device-mobile .scroll-text {
+            font-size: 8px;
+            letter-spacing: 1px;
+        }
+
+        .device-mobile header {
+            padding: 50px 0 40px;
+        }
+
+        .device-mobile h1 {
+            font-size: 28px;
+            letter-spacing: 4px;
+        }
+
+        .device-mobile .avatar {
+            width: 100px;
+            height: 100px;
+        }
+
+        .device-mobile .avatar img {
+            width: 112%;
+            height: 112%;
+            margin: -6%;
+            object-fit: cover;
+        }
+
+        .device-mobile .avatar-text {
+            font-size: 34px;
+        }
+
+        .device-mobile .title {
+            font-size: 11px;
+            letter-spacing: 3px;
+        }
+
+        .device-mobile .motto-link {
+            font-size: 11px;
+        }
+
+        .device-mobile .social-links {
+            gap: 15px;
+        }
+
+        .device-mobile .social-links a {
+            font-size: 9px;
+            letter-spacing: 1px;
+        }
+
+        /* 六宫格响应式 */
+        .device-mobile .sections-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+            padding: 30px 15px;
+        }
+
+        .device-mobile .sections-grid > section:nth-child(even) {
+            transform: translateY(0);
+        }
+
+        .device-mobile section {
+            padding: 25px 20px;
+        }
+
+        .device-mobile .section-number {
+            font-size: 32px;
+            left: -8px;
+            top: -15px;
+        }
+
+        .device-mobile .section-title {
+            font-size: 20px;
+            letter-spacing: 3px;
+        }
+
+        .device-mobile .works-grid,
+        .device-mobile .videos-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .device-mobile .gallery-grid,
+        .device-mobile .footprints-grid,
+        .device-mobile .reviews-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .device-mobile .work-image,
+        .device-mobile .gallery-image {
+            height: 70px;
+        }
+
+        .device-mobile .video-thumbnail {
+            aspect-ratio: 3/2;
+            height: auto;
+        }
+
+        .device-mobile .footprint-image {
+            height: 50px;
+        }
+
+        .device-mobile .footer-content {
+            flex-direction: column;
+            text-align: center;
+            gap: 15px;
+        }
+
+        .device-mobile .copyright {
+            font-size: 10px;
+        }
+
+        .device-mobile .footer-links {
+            gap: 15px;
+        }
+
+        /* 平板端响应式 */
+        .device-tablet .sections-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            padding: 40px 20px;
+        }
+
+        .device-tablet .sections-grid > section:nth-child(even) {
+            transform: translateY(30px);
+        }
+
+        /* ==================== 媒体查询 - 确保兼容性 ==================== */
+        @media (max-width: 1024px) {
+            .container {
+                padding: 0 20px;
+            }
+
+            .sections-grid {
+                gap: 30px;
+            }
+
+            header .title {
+                font-size: 12px;
+            }
+
+            .social-links {
+                gap: 15px;
+            }
+
+            .social-links a {
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 15px;
+            }
+
+            /* 英雄区域优化 */
+            .hero-overlay {
+                min-height: 500px;
+            }
+
+            .hero-title {
+                font-size: 48px;
+            }
+
+            .hero-subtitle {
+                font-size: 14px;
+            }
+
+            /* 头部区域优化 */
+            header {
+                padding: 40px 0;
+            }
+
+            header h1 {
+                font-size: 28px;
+            }
+
+            header .title {
+                font-size: 11px;
+                line-height: 1.6;
+            }
+
+            .avatar img {
+                width: 100%;
+                height: 100%;
+            }
+
+            .social-links {
+                gap: 12px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .social-links a {
+                font-size: 11px;
+                padding: 6px 12px;
+            }
+
+            .motto-quote {
+                font-size: 13px;
+            }
+
+            .motto-source {
+                font-size: 10px;
+            }
+
+            /* 区块布局优化 */
+            .sections-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            section {
+                padding: 30px 20px;
+            }
+
+            .sections-grid > section:nth-child(even) {
+                transform: translateY(0);
+            }
+
+            section h2 {
+                font-size: 18px;
+            }
+
+            section p {
+                font-size: 13px;
+                line-height: 1.6;
+            }
+
+            .section-link {
+                font-size: 12px;
+                padding: 8px 20px;
+            }
+
+            /* 联系我弹窗响应式样式 */
+            .contact-modal-content {
+                max-width: 90%;
+                max-height: 80vh;
+                padding: 20px;
+                box-sizing: border-box;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .contact-body {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+                padding: 15px 0;
+                max-width: 100%;
+                overflow-y: auto;
+                flex: 1;
+            }
+
+            .contact-qrcodes {
+                flex-direction: row;
+                gap: 20px;
+                flex-shrink: 0;
+            }
+
+            .contact-info {
+                width: 100%;
+                padding-top: 0;
+                flex: none;
+            }
+
+            .contact-item {
+                flex-wrap: wrap;
+                gap: 8px;
+                cursor: pointer;
+                user-select: none;
+            }
+
+            .contact-label {
+                width: auto;
+                flex-shrink: 0;
+            }
+
+            .contact-value {
+                flex: 1;
+                min-width: 0;
+                word-break: break-all;
+            }
+
+            /* 页脚优化 */
+            footer {
+                padding: 20px 15px;
+            }
+
+            footer p {
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 10px;
+            }
+
+            .hero-overlay {
+                padding: 0 10px;
+                min-height: 450px;
+            }
+
+            .hero-title {
+                font-size: 36px;
+            }
+
+            .hero-subtitle {
+                font-size: 12px;
+            }
+
+            header {
+                padding: 30px 0;
+            }
+
+            header h1 {
+                font-size: 24px;
+            }
+
+            header .title {
+                font-size: 10px;
+            }
+
+            .avatar img {
+                width: 60px;
+                height: 60px;
+            }
+
+            section {
+                padding: 20px 15px;
+            }
+
+            section h2 {
+                font-size: 16px;
+            }
+
+            section p {
+                font-size: 12px;
+            }
+
+            .scroll-text {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 横幅效果 -->
+    <div class="hero-overlay" id="heroOverlay">
+        <!-- 背景锤子镰刀符号 -->
+        <div class="hero-bg-symbol">☭</div>
+        
+        <div class="hero-content">
+            <div class="hero-logo">
+                <img src="https://i.imgs.ovh/2026/06/05/591235e353d35031571078f27583f5bb.jpg" alt="头像" />
+            </div>
+            <p class="hero-subtitle">前卫 · 革命 · 硬核</p>
+        </div>
+        <div class="scroll-indicator" id="scrollIndicator">
+            <span class="scroll-text">滑动探索</span>
+            <div class="scroll-arrow"></div>
+        </div>
+    </div>
+
+    <!-- 头部区域 -->
+    <header>
+        <!-- 流光动态背景 -->
+        <div class="hero-light-streak"></div>
+        
+        <div class="container">
+            <div class="avatar">
+                <img src="https://i.imgs.ovh/2026/06/05/591235e353d35031571078f27583f5bb.jpg" alt="头像" />
+            </div>
+            <h1>甄别</h1>
+            <p class="title">开发者 / 工程师 / 创作者 / 设计师 / 制片人<br>调查记者 / 主编 / 审计 / 签约作家<br>策划 / 顾问 / 运营</p>
+            <a href="#" class="motto-link" target="_blank" rel="noopener noreferrer" title="阅读原文">
+    <span class="motto-quote">"很多人年轻时都觉得自己能例外。"</span>
+    <span class="motto-source">——《《撞开那些绕不过去的“南墙”》》</span>
+</a>
+            <nav class="social-links">
+                <a href="#" id="wechat-link" aria-label="微信公众号">公众号</a>
+                <a href="#" id="bilibili-link" aria-label="Bilibili">Bilibili</a>
+                <a href="about.html" aria-label="关于我">关于我</a>
+                <a href="#" id="contact-link" aria-label="联系方式">联系我</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 微信公众号弹窗 -->
+    <div id="wechat-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="关闭弹窗">&times;</button>
+            <div class="modal-header">
+                <h3>关注公众号</h3>
+            </div>
+            <div class="modal-body">
+                <div class="qrcode-container">
+                    <div class="qrcode-frame">
+                        <img src="https://i.imgs.ovh/2026/06/06/92ca2f53ad129304e9ec78b410d98567.jpg" alt="微信公众号二维码" class="qrcode-image" />
+                    </div>
+                    <div class="qrcode-decoration qr-corner qr-corner-tl"></div>
+                    <div class="qrcode-decoration qr-corner qr-corner-tr"></div>
+                    <div class="qrcode-decoration qr-corner qr-corner-bl"></div>
+                    <div class="qrcode-decoration qr-corner qr-corner-br"></div>
+                </div>
+                <p class="qrcode-text">扫描二维码，关注微信公众号</p>
+            </div>
+            <div class="modal-footer">
+                <span class="modal-hint">长按二维码可保存图片</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bilibili弹窗 -->
+    <div id="bilibili-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close bilibili-close" aria-label="关闭弹窗">&times;</button>
+            <div class="modal-header">
+                <h3>关注Bilibili</h3>
+            </div>
+            <div class="modal-body">
+                <div class="qrcode-container">
+                    <div class="qrcode-frame">
+                        <img src="https://i.imgs.ovh/2026/06/06/27ce83539c6219241e8acdd009f52018.png" alt="Bilibili二维码" class="qrcode-image" />
+                    </div>
+                    <div class="qrcode-decoration qr-corner qr-corner-tl"></div>
+                    <div class="qrcode-decoration qr-corner qr-corner-tr"></div>
+                    <div class="qrcode-decoration qr-corner qr-corner-bl"></div>
+                    <div class="qrcode-decoration qr-corner qr-corner-br"></div>
+                </div>
+                <p class="qrcode-text">扫描二维码，关注Bilibili</p>
+            </div>
+            <div class="modal-footer">
+                <a href="https://b23.tv/tSbDADV" target="_blank" rel="noopener noreferrer" class="modal-hint modal-link">直达B站主页传送门</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 联系我弹窗 -->
+    <div id="contact-modal" class="modal-overlay">
+        <div class="modal-content contact-modal-content">
+            <button class="modal-close contact-close" aria-label="关闭弹窗">&times;</button>
+            <div class="modal-header">
+                <h3>联系我</h3>
+            </div>
+            <div class="contact-body">
+                <div class="contact-qrcodes">
+                    <div class="contact-qr-item">
+                        <div class="qrcode-frame">
+                            <img src="https://i.imgs.ovh/2026/06/06/631a3a350cb15480f6e3d3a1fb4683db.jpg" alt="微信二维码" class="qrcode-image qrcode-image-wechat" />
+                        </div>
+                        <p class="qrcode-label">微信</p>
+                    </div>
+                    <div class="contact-qr-item">
+                        <div class="qrcode-frame">
+                            <img src="https://i.imgs.ovh/2026/06/06/0d4383c69f329f996d413a092af3d6e4.jpg" alt="QQ二维码" class="qrcode-image qrcode-image-qq" />
+                        </div>
+                        <p class="qrcode-label">QQ</p>
+                    </div>
+                </div>
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <span class="contact-icon">💬</span>
+                        <span class="contact-label">微信</span>
+                        <span class="contact-value">INLER001</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">🐧</span>
+                        <span class="contact-label">QQ</span>
+                        <span class="contact-value">3437669564</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📧</span>
+                        <span class="contact-label">邮箱</span>
+                        <span class="contact-value">INLER001@Foxmail.com</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">🎵</span>
+                        <span class="contact-label">抖音</span>
+                        <span class="contact-value">INLER009</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">🎮</span>
+                        <span class="contact-label">Steam</span>
+                        <span class="contact-value">1180261647</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📦</span>
+                        <span class="contact-label">小黑盒</span>
+                        <span class="contact-value">59461535</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📕</span>
+                        <span class="contact-label">小红书</span>
+                        <span class="contact-value">26831160147</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐私政策弹窗 -->
+    <div id="privacy-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="关闭弹窗">&times;</button>
+            <div class="modal-header">
+                <h3>隐私政策</h3>
+            </div>
+            <div class="modal-body">
+                <div class="privacy-content">
+                    <h4>一、信息收集</h4>
+                    <p>1. 当您访问本网站时，我们可能会收集您的IP地址、浏览器类型、访问时间等基本信息，用于网站统计和优化。</p>
+                    <p>2. 当您通过网站提交表单或发送消息时，我们会收集您提供的姓名、邮箱、联系方式等信息，以便回复您的咨询。</p>
+                    
+                    <h4>二、信息使用</h4>
+                    <p>1. 收集的信息将用于提供更好的用户体验、改进网站服务和内容。</p>
+                    <p>2. 我们不会向第三方出售、出租或共享您的个人信息，除非获得您的明确授权或法律法规要求。</p>
+                    
+                    <h4>三、信息保护</h4>
+                    <p>1. 我们采用行业标准的安全措施保护您的个人信息，防止未经授权的访问、使用或泄露。</p>
+                    <p>2. 尽管我们采取了安全措施，但互联网传输无法保证绝对安全，您需要自行承担风险。</p>
+                    
+                    <h4>四、Cookie使用</h4>
+                    <p>1. 本网站可能使用Cookie来改善用户体验和追踪访问模式。</p>
+                    <p>2. 您可以通过浏览器设置拒绝Cookie，但这可能影响部分功能的正常使用。</p>
+                    
+                    <h4>五、政策变更</h4>
+                    <p>1. 我们可能不定期更新本隐私政策，更新后的政策将在网站上发布。</p>
+                    <p>2. 继续使用本网站即表示您接受更新后的隐私政策。</p>
+                    
+                    <h4>六、联系我们</h4>
+                    <p>如果您对本隐私政策有任何疑问或建议，请通过网站的联系方式与我们联系。</p>
+                    
+                    <p class="privacy-date">最后更新：2026.06.07</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 服务条款弹窗 -->
+    <div id="terms-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="关闭弹窗">&times;</button>
+            <div class="modal-header">
+                <h3>服务条款</h3>
+            </div>
+            <div class="modal-body">
+                <div class="privacy-content">
+                    <p>本网站为个人官网，由甄别所有和运营。</p>
+                    
+                    <h4>1. 版权声明</h4>
+                    <p>本站所有原创内容（包括但不限于文章、视频、图片、代码、设计）版权归甄别所有。未经书面授权，禁止进行商业性使用或完整转载。允许合理引用并注明出处。</p>
+                    
+                    <h4>2. 用户行为</h4>
+                    <p>您不得使用本网站发布违法、骚扰、诽谤、淫秽、侵犯他人权益或违反 GitHub Pages 服务条款的内容。如发现违规评论或行为，本站有权立即删除并永久封禁相关访问者。</p>
+                    
+                    <h4>3. 免责声明</h4>
+                    <p>本网站内容仅供学习和参考，不保证绝对准确、完整或时效性。您基于本站内容作出的任何决策，后果由您自行承担。</p>
+                    <p>本站可能包含第三方链接，对第三方网站的内容及行为概不负责。</p>
+                    <p>因 GitHub Pages、Cloudflare 或网络故障导致的服务中断或数据丢失，本站不承担任何责任。</p>
+                    
+                    <h4>4. 隐私说明</h4>
+                    <p>本站不主动收集或存储您的个人信息。但托管方（GitHub Pages）和 CDN 服务商（Cloudflare）可能会记录标准访问日志，详情请查阅其隐私政策。若本站启用了第三方评论系统，其隐私行为由第三方负责。</p>
+                    
+                    <h4>5. 法律适用</h4>
+                    <p>本条款的解释与执行适用中国大陆法律。如有争议，双方应友好协商解决。</p>
+                    
+                    <h4>6. 条款修改</h4>
+                    <p>本站保留随时更新本条款的权利。修改后的条款自发布时生效，请定期查阅。</p>
+                    
+                    <p class="privacy-date">最后更新：2026年6月7日</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 友情链接弹窗 -->
+    <div id="links-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="关闭弹窗">&times;</button>
+            <div class="modal-header">
+                <h3>友情链接</h3>
+            </div>
+            <div class="modal-body">
+                <div class="privacy-content">
+                    <div style="text-align: center; padding: 20px;">
+                        <span style="font-size: 60px; display: block; margin-bottom: 20px;">🔗</span>
+                        <p style="font-size: 16px; line-height: 1.8; color: #666;">
+                            本站的友情链接很贵——贵在真诚，所以还在甄选中。欢迎与我联系互换~
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 六宫格板块布局 -->
+    <div class="sections-grid">
+        <!-- 先锋艺术装饰元素 -->
+        <div class="diagonal-line"></div>
+        <div class="triangle-1"></div>
+        <div class="triangle-2"></div>
+        <div class="square-1"></div>
+        <div class="square-2"></div>
+        <div class="circle-1"></div>
+        <div class="circle-2"></div>
+        
+        <!-- 作品板块 -->
+        <section id="works">
+            <div class="section-header">
+                <span class="section-number">01</span>
+                <div class="section-title-wrap">
+                    <h2 class="section-title">作品</h2>
+                </div>
+            </div>
+            <div class="works-grid">
+                <article class="work-card" onclick="goToWork(0)">
+                    <div class="work-image"><span>项目图片</span></div>
+                    <h3>加载中...</h3>
+                    <p>加载中...</p>
+                </article>
+                <article class="work-card" onclick="goToWork(1)">
+                    <div class="work-image"><span>项目图片</span></div>
+                    <h3>加载中...</h3>
+                    <p>加载中...</p>
+                </article>
+                <article class="work-card" onclick="goToWork(2)">
+                    <div class="work-image"><span>项目图片</span></div>
+                    <h3>加载中...</h3>
+                    <p>加载中...</p>
+                </article>
+            </div>
+            <a href="work.html" class="view-all">查看全部作品</a>
+        </section>
+
+        <!--文章板块 -->
+        <section id="writings">
+            <div class="section-header">
+                <span class="section-number">02</span>
+                <div class="section-title-wrap">
+                    <h2 class="section-title">文章</h2>
+                </div>
+            </div>
+            <div class="writings-list" id="writings-container">
+                <!-- 文章列表将通过JavaScript动态加载 -->
+                <article class="writing-item">
+                    <h3><a href="#" target="_blank" rel="noopener noreferrer">加载中...</a></h3>
+                    <p class="writing-meta">加载中...</p>
+                </article>
+                <article class="writing-item">
+                    <h3><a href="#" target="_blank" rel="noopener noreferrer">加载中...</a></h3>
+                    <p class="writing-meta">加载中...</p>
+                </article>
+                <article class="writing-item">
+                    <h3><a href="#" target="_blank" rel="noopener noreferrer">加载中...</a></h3>
+                    <p class="writing-meta">加载中...</p>
+                </article>
+            </div>
+            <a href="paper.html" class="view-all" id="view-all-writings">阅读全部文章</a>
+        </section>
+
+        <!-- 视频板块 -->
+        <section id="videos">
+            <div class="section-header">
+                <span class="section-number">03</span>
+                <div class="section-title-wrap">
+                    <h2 class="section-title">视频</h2>
+                </div>
+            </div>
+            <div class="videos-grid" id="videosGrid">
+                <!-- 动态加载视频内容 -->
+            </div>
+            <a href="video.html" class="view-all">观看全部视频</a>
+        </section>
+
+        <!-- 测评板块 -->
+        <section id="reviews">
+            <div class="section-header">
+                <span class="section-number">04</span>
+                <div class="section-title-wrap">
+                    <h2 class="section-title">测评</h2>
+                </div>
+            </div>
+            <div class="reviews-grid" id="reviewsGrid">
+                <!-- 评测卡片将通过JavaScript动态生成 -->
+            </div>
+            <a href="review.html" class="view-all">查看全部测评</a>
+        </section>
+
+        <!-- 画廊板块 -->
+        <section id="gallery">
+            <div class="section-header">
+                <span class="section-number">05</span>
+                <div class="section-title-wrap">
+                    <h2 class="section-title">画廊</h2>
+                </div>
+            </div>
+            <div class="gallery-grid" id="homeGalleryGrid">
+                <article class="gallery-item">
+                    <div class="gallery-image"></div>
+                    <p>加载中...</p>
+                </article>
+                <article class="gallery-item">
+                    <div class="gallery-image"></div>
+                    <p>加载中...</p>
+                </article>
+                <article class="gallery-item">
+                    <div class="gallery-image"></div>
+                    <p>加载中...</p>
+                </article>
+                <article class="gallery-item">
+                    <div class="gallery-image"></div>
+                    <p>加载中...</p>
+                </article>
+                <article class="gallery-item">
+                    <div class="gallery-image"></div>
+                    <p>加载中...</p>
+                </article>
+                <article class="gallery-item">
+                    <div class="gallery-image"></div>
+                    <p>加载中...</p>
+                </article>
+            </div>
+            <a href="gallery.html" class="view-all">探索完整画廊</a>
+        </section>
+
+        <!-- 足迹板块 - 中国地图 -->
+        <section id="footprints">
+            <div class="section-header">
+                <span class="section-number">06</span>
+                <div class="section-title-wrap">
+                    <h2 class="section-title">足迹</h2>
+                </div>
+            </div>
+            <div class="footprints-grid">
+                <div id="chinaMap" class="china-map">
+                    <svg viewBox="0 0 500 350" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        
+                        <g class="map-background">
+                            <path d="M80,60 L120,50 L140,70 L135,95 L100,110 L85,90 Z" fill="rgba(230,57,70,0.1)" stroke="#E63946" stroke-width="1" title="东北"/>
+                            <path d="M125,65 L180,50 L200,75 L195,100 L160,115 L140,95 L135,75 Z" fill="rgba(230,57,70,0.1)" stroke="#E63946" stroke-width="1" title="华北"/>
+                            <path d="M175,85 L230,70 L245,95 L235,120 L200,135 L185,115 L180,95 Z" fill="rgba(230,57,70,0.1)" stroke="#E63946" stroke-width="1" title="华东"/>
+                            <path d="M140,105 L185,95 L200,120 L185,145 L155,155 L140,135 L135,115 Z" fill="rgba(230,57,70,0.1)" stroke="#E63946" stroke-width="1" title="西北"/>
+                            <path d="M195,115 L250,100 L265,125 L250,150 L215,160 L200,140 L195,120 Z" fill="rgba(230,57,70,0.1)" stroke="#E63946" stroke-width="1" title="华中"/>
+                            <path d="M165,140 L210,130 L225,155 L210,180 L180,190 L165,165 L160,145 Z" fill="rgba(230,57,70,0.1)" stroke="#E63946" stroke-width="1" title="西南"/>
+                            <path d="M215,135 L265,120 L280,145 L265,170 L235,180 L220,155 L215,140 Z" fill="rgba(230,57,70,0.1)" stroke="#E63946" stroke-width="1" title="华南"/>
+                            
+                            <ellipse cx="300" cy="150" rx="20" ry="15" fill="rgba(230,57,70,0.1)" stroke="#E63946" stroke-width="1" title="台湾"/>
+                            <ellipse cx="260" cy="200" rx="12" ry="8" fill="rgba(230,57,70,0.1)" stroke="#E63946" stroke-width="1" title="海南"/>
+                        </g>
+                        
+                        <g class="provinces">
+                            <circle cx="110" cy="70" r="4" class="province active" title="北京"/>
+                            <circle cx="130" cy="60" r="3" class="province" title="天津"/>
+                            <circle cx="160" cy="80" r="3" class="province" title="河北"/>
+                            <circle cx="195" cy="95" r="3" class="province" title="山东"/>
+                            <circle cx="155" cy="105" r="3" class="province" title="山西"/>
+                            <circle cx="210" cy="115" r="3" class="province" title="河南"/>
+                            <circle cx="180" cy="130" r="3" class="province" title="陕西"/>
+                            <circle cx="235" cy="125" r="3" class="province" title="安徽"/>
+                            <circle cx="225" cy="145" r="3" class="province" title="湖北"/>
+                            <circle cx="250" cy="140" r="3" class="province" title="江西"/>
+                            <circle cx="240" cy="160" r="3" class="province" title="湖南"/>
+                            <circle cx="270" cy="150" r="3" class="province" title="福建"/>
+                            <circle cx="255" cy="175" r="3" class="province" title="广东"/>
+                            <circle cx="95" cy="85" r="3" class="province" title="内蒙古"/>
+                            <circle cx="90" cy="65" r="3" class="province" title="辽宁"/>
+                            <circle cx="100" cy="95" r="3" class="province" title="吉林"/>
+                            <circle cx="115" cy="100" r="3" class="province" title="黑龙江"/>
+                            <circle cx="250" cy="105" r="3" class="province" title="江苏"/>
+                            <circle cx="265" cy="120" r="3" class="province" title="浙江"/>
+                            <circle cx="275" cy="130" r="3" class="province" title="上海"/>
+                            <circle cx="300" cy="150" r="4" class="province" title="台湾"/>
+                            <circle cx="260" cy="200" r="4" class="province" title="海南"/>
+                            <circle cx="165" cy="145" r="3" class="province" title="宁夏"/>
+                            <circle cx="145" cy="130" r="3" class="province" title="甘肃"/>
+                            <circle cx="135" cy="150" r="3" class="province" title="青海"/>
+                            <circle cx="105" cy="140" r="3" class="province" title="新疆"/>
+                            <circle cx="195" cy="155" r="3" class="province" title="四川"/>
+                            <circle cx="210" cy="165" r="3" class="province" title="重庆"/>
+                            <circle cx="245" cy="185" r="3" class="province" title="广西"/>
+                            <circle cx="190" cy="175" r="3" class="province" title="贵州"/>
+                            <circle cx="175" cy="180" r="3" class="province" title="云南"/>
+                            <circle cx="140" cy="170" r="3" class="province" title="西藏"/>
+                        </g>
+                        
+                        <text x="250" y="330" class="province-label" text-anchor="middle">点击圆点查看足迹</text>
+                    </svg>
+                </div>
+            </div>
+            <a href="travel.html" class="view-all">查看全部足迹</a>
+        </section>
+    </div>
+
+    <!-- 页脚 -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <p class="copyright">© 2026 · 始于伟大的20岁</p>
+                <nav class="footer-links">
+                    <a href="#">隐私政策</a>
+                    <a href="#">服务条款</a>
+                    <a href="#">友情链接</a>
+                </nav>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JS脚本 -->
+    <script>
+        // 设备检测
+        const deviceDetection = (function() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const screenWidth = window.innerWidth;
+            
+            const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent) || 
+                           (screenWidth <= 768);
+            const isTablet = /ipad|tablet|kindle|silk|playbook/i.test(userAgent) || 
+                           (screenWidth > 768 && screenWidth <= 1024);
+            const isDesktop = !isMobile && !isTablet;
+            
+            const deviceType = isMobile ? 'mobile' : isTablet ? 'tablet' : 'desktop';
+            const osType = userAgent.includes('windows') ? 'windows' : 
+                         userAgent.includes('mac') ? 'mac' : 
+                         userAgent.includes('linux') ? 'linux' :
+                         userAgent.includes('android') ? 'android' :
+                         userAgent.includes('iphone') || userAgent.includes('ipad') ? 'ios' : 'unknown';
+            
+            // 为body添加设备类型类
+            document.body.classList.add(`device-${deviceType}`);
+            document.body.classList.add(`os-${osType}`);
+            
+            return {
+                isMobile,
+                isTablet,
+                isDesktop,
+                deviceType,
+                osType,
+                screenWidth,
+                screenHeight: window.innerHeight
+            };
+        })();
+
+        // 横幅效果 - 根据设备类型调整
+        const heroOverlay = document.getElementById('heroOverlay');
+        const scrollIndicator = document.getElementById('scrollIndicator');
+        const autoHideDelay = deviceDetection.isMobile ? 3000 : 5000; // 移动端3秒自动隐藏
+
+        const hideOverlay = () => {
+            if (!heroOverlay.classList.contains('hidden')) {
+                heroOverlay.classList.add('hidden');
+            }
+        };
+
+        // 移动端：点击任意位置隐藏横幅
+        if (deviceDetection.isMobile) {
+            heroOverlay.addEventListener('click', hideOverlay);
+        } else {
+            scrollIndicator.addEventListener('click', hideOverlay);
+        }
+
+        // 监听滚动事件
+        let hasScrolled = false;
+        const handleScroll = () => {
+            if (!hasScrolled) {
+                hasScrolled = true;
+                hideOverlay();
+            }
+        };
+
+        // 移动端使用触摸事件
+        if (deviceDetection.isMobile) {
+            document.addEventListener('touchstart', handleScroll, { once: true });
+        }
+        window.addEventListener('scroll', handleScroll, { once: true });
+
+        // 自动隐藏
+        setTimeout(() => {
+            if (!hasScrolled) {
+                hideOverlay();
+            }
+        }, autoHideDelay);
+
+        // 窗口大小变化时更新设备状态
+        window.addEventListener('resize', () => {
+            const newWidth = window.innerWidth;
+            const wasMobile = deviceDetection.isMobile;
+            deviceDetection.isMobile = newWidth <= 768;
+            deviceDetection.isDesktop = newWidth > 1024;
+            deviceDetection.isTablet = !deviceDetection.isMobile && !deviceDetection.isDesktop;
+            
+            if (wasMobile !== deviceDetection.isMobile) {
+                // 设备类型改变，刷新页面以应用新样式
+                // 或者动态调整样式
+                document.body.classList.remove('device-mobile', 'device-tablet', 'device-desktop');
+                document.body.classList.add(`device-${deviceDetection.isMobile ? 'mobile' : deviceDetection.isTablet ? 'tablet' : 'desktop'}`);
+            }
+        });
+
+        // 中国地图省份交互
+        const provinces = document.querySelectorAll('.province');
+        
+        provinces.forEach(province => {
+            province.addEventListener('click', () => {
+                const provinceName = province.getAttribute('title');
+                
+                if (province.classList.contains('active')) {
+                    province.classList.remove('active');
+                    console.log(`%c 取消点亮: ${provinceName}`, 'color: #888888; font-family: monospace;');
+                } else {
+                    province.classList.add('active');
+                    console.log(`%c 点亮省份: ${provinceName}`, 'color: #E63946; font-family: monospace;');
+                }
+            });
+            
+            province.addEventListener('mouseenter', () => {
+                province.style.cursor = 'pointer';
+            });
+        });
+
+        // 控制台设备信息
+        console.log('%c ┌─────────────────────────────────┐', 'color: #E63946; font-family: monospace;');
+        console.log('%c │         设备检测信息            │', 'color: #E63946; font-family: monospace;');
+        console.log('%c ├─────────────────────────────────┤', 'color: #E63946; font-family: monospace;');
+        console.log(`%c │ 设备类型: ${deviceDetection.deviceType.padEnd(8)} │`, 'color: #E0E0E0; font-family: monospace;');
+        console.log(`%c │ 操作系统: ${deviceDetection.osType.padEnd(8)} │`, 'color: #E0E0E0; font-family: monospace;');
+        console.log(`%c │ 屏幕尺寸: ${deviceDetection.screenWidth} x ${deviceDetection.screenHeight} │`, 'color: #E0E0E0; font-family: monospace;');
+        console.log('%c └─────────────────────────────────┘', 'color: #E63946; font-family: monospace;');
+        console.log('');
+        console.log('%c 欢迎来到我的作品集', 'color: #E0E0E0; font-family: monospace;');
+        
+        // 刷新地图数据函数
+        const refreshMapData = (chart) => {
+            try {
+                const storedData = localStorage.getItem('travelHighlightedProvinces');
+                if (storedData) {
+                    const highlightedProvinces = JSON.parse(storedData);
+                    if (Array.isArray(highlightedProvinces) && highlightedProvinces.length > 0) {
+                        // 获取当前地图数据并更新高亮状态
+                        const option = chart.getOption();
+                        if (option.series && option.series[0] && option.series[0].data) {
+                            const updatedData = option.series[0].data.map(item => ({
+                                name: item.name,
+                                value: highlightedProvinces.includes(item.name) ? 1 : 0
+                            }));
+                            chart.setOption({
+                                series: [{
+                                    data: updatedData
+                                }]
+                            });
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('刷新地图数据失败:', e);
+            }
+        };
+
+        // ECharts中国地图初始化
+        const initChinaMap = async () => {
+            const mapContainer = document.getElementById('chinaMap');
+            if (!mapContainer) return;
+            
+            const myChart = echarts.init(mapContainer);
+            
+            // 从CDN加载真实的GeoJSON数据
+            try {
+                const response = await fetch('https://cdn.jsdelivr.net/gh/longwosion/geojson-map-china@master/china.json');
+                const chinaGeoJson = await response.json();
+                
+                // 从GeoJSON中提取省份名称
+                const provinceNames = chinaGeoJson.features.map(f => f.properties.name);
+                
+                // 从 localStorage 读取足迹页的点亮数据，若不存在则使用默认数据
+                let highlightedProvinces = ['上海市', '江苏省', '浙江省', '广东省', '广西壮族自治区', '重庆市', '四川省', '陕西省'];
+                try {
+                    const storedData = localStorage.getItem('travelHighlightedProvinces');
+                    if (storedData) {
+                        const parsedData = JSON.parse(storedData);
+                        if (Array.isArray(parsedData) && parsedData.length > 0) {
+                            highlightedProvinces = parsedData;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('读取足迹数据失败，使用默认数据:', e);
+                }
+                
+                // 构建地图数据 - 高亮省份value为1，其他为0
+                const mapData = provinceNames.map(name => ({
+                    name: name,
+                    value: highlightedProvinces.includes(name) ? 1 : 0
+                }));
+                
+                // 注册地图
+                echarts.registerMap('china', chinaGeoJson);
+            
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(params) {
+                        return params.name;
+                    },
+                    textStyle: { color: '#E0E0E0', fontSize: 14 }
+                },
+                visualMap: {
+                    show: false,
+                    min: 0,
+                    max: 1,
+                    inRange: {
+                        color: ['rgba(230, 57, 70, 0.1)', 'rgba(230, 57, 70, 0.9)']
+                    }
+                },
+                series: [{
+                    name: '中国行政区划',
+                    type: 'map',
+                    map: 'china',
+                    roam: true,
+                    zoom: 1.2,
+                    label: { show: false },
+                    emphasis: {
+                        label: { show: false },
+                        itemStyle: { 
+                            areaColor: '#E63946',
+                            shadowBlur: 20,
+                            shadowColor: 'rgba(230, 57, 70, 0.8)'
+                        }
+                    },
+                    itemStyle: {
+                        areaColor: 'rgba(230, 57, 70, 0.1)',
+                        borderColor: '#E63946',
+                        borderWidth: 1,
+                        shadowBlur: 5,
+                        shadowColor: 'rgba(230, 57, 70, 0.3)'
+                    },
+                    data: mapData
+                }]
+            };
+            
+            myChart.setOption(option);
+            
+            // 添加地图点击事件 - 点击任意省份都跳转到足迹页面
+            myChart.on('click', function() {
+                window.location.href = 'travel.html';
+            });
+            
+            window.addEventListener('resize', () => { myChart.resize(); });
+            
+            // 监听页面可见性变化，当页面重新可见时刷新地图数据
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    refreshMapData(myChart);
+                }
+            });
+            
+            // 监听浏览器标签页切换事件
+            window.addEventListener('pageshow', () => {
+                refreshMapData(myChart);
+            });
+            } catch (error) {
+                console.error('地图加载失败:', error);
+                mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#E0E0E0;font-size:14px;">地图加载失败</div>';
+            }
+        };
+        
+        // 随机语录功能
+        const quotes = [
+            {
+                text: "谁拥有命名权，谁就拥有解释权。",
+                source: "《当“神人TV”成为流量密码》",
+                link: "https://mp.weixin.qq.com/s/RYc9RjUtznJBSxr8pI2guQ"
+            },
+            {
+                text: "再浪漫的漂泊，也会有疲惫的一天。",
+                source: "《故乡是可以被选择的》",
+                link: "https://mp.weixin.qq.com/s/_7O5uI_geuZWkWAIu_Jzlw"
+            },
+            {
+                text: "人类特别喜欢把结果倒推成原因。",
+                source: "《人类总在废墟上庆祝进步》",
+                link: "https://mp.weixin.qq.com/s/gmZbcs64yTRCosC54QS8zA"
+            },
+            {
+                text: "没有谁天然负有永远陪伴的义务。",
+                source: "《同伴也许并没有那么重要》",
+                link: "https://mp.weixin.qq.com/s/WvQJKXleO4Cq7Peclr-o8g"
+            },
+             {
+                text: "人的体验具有延展性和渗透性。",
+                source: "《预热不只是“预热”》",
+                link: "https://mp.weixin.qq.com/s/njmSMRU4sFBkD4cBv1I-vQ"
+            },
+             {
+                text: "用自己的生活条件当标尺，去丈量别人的选择，本身就带着一种不自觉的傲慢。",
+                source: "《世界很大，玩法不止一种》",
+                link: "https://mp.weixin.qq.com/s/T6cB8CFz0ML928AAdQulFw"
+            },
+             {
+                text: "留一点空间给自己，也留一点边界给他人。",
+                source: "《悲情不是你成为反派的理由》",
+                link: "https://mp.weixin.qq.com/s/NucY0GFO67tYpfXiorJXHg"
+            },
+             {
+                text: "越努力改变自己，越觉得自己需要被改变。",
+                source: "《真正的心理学家是革命家》",
+                link: "https://mp.weixin.qq.com/s/tVrSmjTUXRk3YO_GUQWcDA"
+            },
+             {
+                text: "连接越多，关系越浅；距离越近，理解越少。",
+                source: "《请让关系有呼吸的余地》",
+                link: "https://mp.weixin.qq.com/s/QUMOc84oo6dYr5ukYqdh3A"
+            },
+             {
+                text: "去经历那些没有被完全设计好的过程，去允许自己在不完美中成长。",
+                source: "《请让少年的你永远在路上》",
+                link: "https://mp.weixin.qq.com/s/Qt_POwPcY1OjRQ5ZxpT31Q"
+            },
+             {
+                text: "在认知上趋向理性，在情绪上保留模糊空间。",
+                source: "《相信鬼神，等于承认无知》",
+                link: "https://mp.weixin.qq.com/s/dJ1HCzTohPtCTS-ZTFK1sg"
+            },
+             {
+                text: "人们越来越习惯“看见”，却越来越不习惯“去做”。",
+                source: "《想得再多，不如做成一件事》",
+                link: "https://mp.weixin.qq.com/s/uIEhS9Q5w4xoPlV73576BQ"
+            },
+             {
+                text: "一个仍然愿意讨论问题的社会，总是比彻底沉默的社会更有希望。",
+                source: "《沉默的代价是什么？》",
+                link: "https://mp.weixin.qq.com/s/-Cq2yGCPG96Y6NBZsURztg"
+            },
+            {
+                text: "人总要先碎一次，很多东西才能重新生长。",
+                source: "《不要什么都舍不得》",
+                link: "https://mp.weixin.qq.com/s/9gMd29EaxMRuoeykX_sjwg"
+            },
+            {
+                text: "时间并不会公平地分配给每个人同样的剧本。",
+                source: "《尽得了人事，听不了天命》",
+                link: "https://mp.weixin.qq.com/s/bj8IHv8Iml10zh7Ezdm1Qw"
+            },
+            {
+                text: "很多人年轻时都觉得自己能例外。",
+                source: "《撞开那些绕不过去的“南墙”》",
+                link: "https://mp.weixin.qq.com/s/Wur0JV1NKAThkADmNdLR5w"
+            },
+            {
+                text: "人群从来不是问题本身，问题在于，人群被塑造成什么样子。",
+                source: "《人群，是小人的遮羞布》",
+                link: "https://mp.weixin.qq.com/s/EuQFBLr7P9Wn65iXraQndw"
+            },
+            {
+                text: "怀旧，从来不是为了停留，而是为了在不断加速的世界里，找到一个可以重新出发的坐标。",
+                source: "《当00后也开始怀旧》",
+                link: "https://mp.weixin.qq.com/s/zPfhffNXugDzDTVZX6jzVQ"
+            },
+            {
+                text: "表达的密度并不等于存在的厚度。",
+                source: "《到底是谁问你了？》",
+                link: "https://mp.weixin.qq.com/s/Q6y7y3-iURPns6ORko4Z-A"
+            },
+            {
+                text: "成长本身，就带着一点点“对不起”。",
+                source: "《你迟早会“对不起”过去的自己》",
+                link: "https://mp.weixin.qq.com/s/hz_AVwRzRkftasD1D6dBFQ"
+            }
+        ];
+
+        const initQuote = () => {
+            const mottoLink = document.querySelector('.motto-link');
+            const mottoQuote = document.querySelector('.motto-quote');
+            const mottoSource = document.querySelector('.motto-source');
+            
+            if (!mottoLink || !mottoQuote || !mottoSource) return;
+            
+            // 随机选择一条语录
+            const randomIndex = Math.floor(Math.random() * quotes.length);
+            const randomQuote = quotes[randomIndex];
+            
+            // 更新内容
+            mottoQuote.textContent = `"${randomQuote.text}"`;
+            mottoSource.textContent = `——${randomQuote.source}`;
+            mottoLink.href = randomQuote.link;
+        };
+
+        // 精选文章数据（从paper.html精选文章板块获取）
+        const featuredArticles = [
+            {
+                type: 'article',
+                title: '为什么一代人开始靠“抽象”续命',
+                date: '2026-05-15 0:00',
+                link: 'https://mp.weixin.qq.com/s/ROQNKyMjqiuV54Qr5Y6iDg?token=395777104&lang=zh_CN'
+            },
+            {
+                type: 'article',
+                title: '功成不必在我，功成必定有我',
+                date: '2026-05-12 0:00',
+                link: 'https://mp.weixin.qq.com/s/ZhjSPvDBSmcwjECki0BbWw'
+            },
+            {
+                type: 'article',
+                title: '别再幻想自己是救世主了',
+                date: '2026-05-28 0:00',
+                link: 'https://mp.weixin.qq.com/s/rRlx5p1vVWBNxV2zaOX9nw?token=395777104&lang=zh_CN'
+            },
+            {
+                type: 'article',
+                title: '真正的心理学家是革命家',
+                date: '2026-04-12 0:00',
+                link: 'https://mp.weixin.qq.com/s/tVrSmjTUXRk3YO_GUQWcDA?token=395777104&lang=zh_CN'
+            },
+            {
+                type: 'article',
+                title: '别再让亲情为社会的恶买单',
+                date: '2025-11-10 0:00',
+                link: 'https://mp.weixin.qq.com/s/t2DH9NhpAQNHkG8zoZWSRA?token=395777104&lang=zh_CN'
+            },
+            {
+                type: 'article',
+                title: '为什么总有男性喜欢假扮成女性玩游戏？',
+                date: '2025-11-02 0:00',
+                link: 'https://mp.weixin.qq.com/s/gb_vsuh6s6NpCkugUpx3_Q?token=395777104&lang=zh_CN'
+            },
+            {
+                type: 'article',
+                title: '为什么现在社会上这么多巨婴？',
+                date: '2025-10-22 0:00',
+                link: 'https://mp.weixin.qq.com/s/9qP7RSEVu7R4DUjpp3mdHg?token=395777104&lang=zh_CN'
+            },
+            {
+                type: 'article',
+                title: 'Citywalk何以成了全网的笑话？',
+                date: '2025-08-29 0:00',
+                link: 'https://mp.weixin.qq.com/s/dnLKYPc6d3xfDUuxyqoSIQ?token=395777104&lang=zh_CN'
+            },
+            {
+                type: 'article',
+                title: '“天龙人”是否遥不可及？',
+                date: '2025-08-19 0:00',
+                link: 'https://mp.weixin.qq.com/s/vQBs1XR7Mt6W56zzDKrHEg?token=395777104&lang=zh_CN'
+            },
+            {
+                type: 'article',
+                title: '马克思主义就是唯一普世真理',
+                date: '2025-11-15 0:00',
+                link: 'https://mp.weixin.qq.com/s/7DnoYloTsw-6pqFSzvaUSw?token=395777104&lang=zh_CN'
+            }
+        ];
+
+        // 系列合集数据（从paper.html系列合集板块获取）
+        const seriesCollections = [
+            {
+                type: 'series',
+                title: 'Cocos Creator游戏开发教程',
+                desc: '本教程专为游戏开发初学者及进阶者设计，系统讲解Cocos Creator的核心功能与实战技巧。',
+                link: 'http://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3495745008936796163#wechat_redirect'
+            },
+            {
+                type: 'series',
+                title: 'Android手游外挂开发教程',
+                desc: '本教程聚焦Android手游安全与逆向分析技术，旨在通过理解外挂原理提升游戏防护能力。',
+                link: 'https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3495775849419227139#wechat_redirect'
+            },
+            {
+                type: 'series',
+                title: '页游外挂开发教程',
+                desc: '本教程聚焦网页游戏安全与逆向分析，系统讲解页游外挂的常见实现原理与防御手段。',
+                link: 'https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3495784195043999745#wechat_redirect'
+            },
+            {
+                type: 'series',
+                title: '《LOL》外挂开发教程',
+                desc: '主要从游戏安全与逆向工程角度出发，帮助学习者理解外挂原理并提升反外挂能力。',
+                link: 'https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3495778922082451456#wechat_redirect'
+            },
+            {
+                type: 'series',
+                title: '如何用UE5做一款大逃杀游戏',
+                desc: '本教程将带你从零开始，使用Unreal Engine 5制作一款完整的大逃杀游戏。',
+                link: 'https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3495758088320172035#wechat_redirect'
+            },
+            {
+                type: 'series',
+                title: '从零开始教你移植游戏',
+                desc: '本教程将带你掌握游戏跨平台移植的全流程，从源码环境配置到性能优化。',
+                link: 'https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3495787553389658112#wechat_redirect'
+            },
+            {
+                type: 'series',
+                title: 'Docker傻瓜式入门教程',
+                desc: '本教程为零基础小白量身打造，用最通俗的方式带你快速上手Docker。',
+                link: 'https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3495762431823953921#wechat_redirect'
+            },
+            {
+                type: 'series',
+                title: '如何掌握“免杀”',
+                desc: '本教程将深入讲解免杀技术的核心原理与实战方法，帮助安全学习者提升防护能力。',
+                link: 'https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3489871738685472775#wechat_redirect'
+            },
+            {
+                type: 'series',
+                title: '如何用驱动突破游戏保护',
+                desc: '本教程旨在从游戏安全与反外挂研究的角度，剖析驱动程序如何绕过游戏保护系统。',
+                link: 'https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3495766874883735553#wechat_redirect'
+            },
+            {
+                type: 'series',
+                title: '游戏逆向工程实战',
+                desc: '系统讲解游戏逆向分析技术，包括内存分析、代码注入、协议分析等核心内容。',
+                link: 'https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3495751457561755650#wechat_redirect'
+            },
+            {
+                type: 'series',
+                title: 'Python网络爬虫实战',
+                desc: '从基础到进阶，系统学习Python爬虫技术，包括静态页面抓取、动态渲染爬取等。',
+                link: 'https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3475289968383901698#wechat_redirect'
+            },
+            {
+                type: 'series',
+                title: '机器学习入门与实践',
+                desc: '从零开始学习机器学习，涵盖监督学习、无监督学习等核心算法及实战项目。',
+                link: 'https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkyOTY2NjExMg==&action=getalbum&album_id=3477542301243293697#wechat_redirect'
+            }
+        ];
+
+        // 精选视频数据（从video.html精选视频板块获取）
+        const featuredVideos = [
+            {
+                title: '网左进阶：从共趣到同志',
+                thumbnail: 'https://i.imgs.ovh/2026/06/07/cb1aca7d69a00e520b333531f663b24d.jpg',
+                url: 'https://b23.tv/LZu9wzB'
+            },
+            {
+                title: '从零开始学习马列毛主义',
+                thumbnail: 'https://i.imgs.ovh/2026/06/07/975ce8c29f99c65a162e06031615338c.jpg',
+                url: 'https://b23.tv/m55AXgF'
+            },
+            {
+                title: '资本主义，一切抑郁症的根源',
+                thumbnail: 'https://i.imgs.ovh/2026/06/07/5b9bf05f3ff3b44b5acd7265c20b4f34.jpg',
+                url: 'https://b23.tv/tcvXYOF'
+            },
+            {
+                title: '小资产阶级自救指南',
+                thumbnail: 'https://i.imgs.ovh/2026/06/07/b04edf16d206a1c6416b3126d6e306c2.jpg',
+                url: 'https://b23.tv/7Q0YSG4'
+            },
+            {
+                title: '支持扬弃"共趣"，坚定批判"网左"',
+                thumbnail: 'https://i.imgs.ovh/2026/06/07/a0d64b58d990bf069339a33890a62e07.jpg',
+                url: 'https://b23.tv/yqY6UUK'
+            },
+            {
+                title: '政治冷漠？为什么要批判政治冷感者？',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/d8cce2f810f63329ae232ce35fd96fb1.jpeg',
+                url: 'https://b23.tv/nszDCAx'
+            },
+            {
+                title: '苏联的"输出革命"为何注定失败？',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/5937cdfe4c95eca2bacc54b23ba6c3f4.jpeg',
+                url: 'https://b23.tv/2rNStNk'
+            },
+            {
+                title: '你不知道的雷锋精神"完全体"',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/d8f1d1865ee109a69e44e740c1e020fd.jpeg',
+                url: 'https://b23.tv/pdffbmC'
+            },
+            {
+                title: '只有共产主义才能救美国？又将如何拯救？',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/d057718dce7814073dec53d98873c7fc.jpeg',
+                url: 'https://b23.tv/y7EctVC'
+            },
+            {
+                title: '霍查主义的共运中心——马列主义政党和国际会议(CIPOML)',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/dbffe7fce95817a84adf3604d4bdb0e6.jpeg',
+                url: 'https://youtu.be/gJ019o4GmyI?feature=shared'
+            },
+            {
+                title: '全世界无产阶级的头号导师——卡尔：马克思（上篇）',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/9f85ded68b06286172f7ec66216e367f.jpeg',
+                url: 'https://youtu.be/IW1riDVKb7U?feature=shared'
+            },
+            {
+                title: '敌人是如何批判马克思主义的',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/5bbf381ba746121f0a30b7aab112839c.jpeg',
+                url: 'https://youtu.be/8Gi-vAcx86k?feature=shared'
+            },
+            {
+                title: '全世界无产阶级的头号导师——卡尔·马克思（下篇）',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/47badd3a25552bf557fac93930930a8b.jpeg',
+                url: 'https://youtu.be/UnhPj3WfDBM?feature=shared'
+            },
+            {
+                title: '21世纪替代共产国际的产物——共产党和工人党国际会议(IMCWP)',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/905e5f3fd56d4a7eeb7f463b517a4215.jpeg',
+                url: 'https://youtu.be/fuBQedfOxPw?feature=shared'
+            },
+            {
+                title: '美洲共运的火种与指路明灯——古巴共产党',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/38124b78d1698304b9691057ffb81f5e.jpeg',
+                url: 'https://youtu.be/F9YraRKaOJs?feature=shared'
+            },
+            {
+                title: '与共产国际相抗衡的托派联盟——第四国际',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/1f98b40b1c4218d58f11fda6e57a9b99.jpeg',
+                url: 'https://youtu.be/v8gJOYEC6to?feature=shared'
+            },
+            {
+                title: '国际共运还有希望吗',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/0e0b154110210f41fc507d7e44c3a6c3.jpeg',
+                url: 'https://youtu.be/QSW3QNlYCYM?feature=shared'
+            },
+            {
+                title: '智利左翼大旗的旗手——革命左翼运动(MIR)',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/3252db294da8e3034a313d87a6f9b765.jpeg',
+                url: 'https://youtu.be/HdQzzAUpnqw?feature=shared'
+            },
+            {
+                title: '国际共运史上的不甘与耻辱——柬埔寨共产党',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/19ec9041d57ca6c4a82643d074fad09e.png',
+                url: 'https://youtu.be/so6kzfupECU?feature=shared'
+            },
+            {
+                title: '2021-净协年度总结报告',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/edb733f6fbedeab2a6f0ea8e566c13bb.jpeg',
+                url: 'https://b23.tv/Fih3JkZ'
+            },
+            {
+                title: '2020-净协年度总结报告',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/3fbfd9e98df254a1d7d22404128487dc.jpeg',
+                url: 'https://b23.tv/2hKst7k'
+            },
+            {
+                title: '2019-2020，一分钟看净协两年历程',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/3e20cc214ba20164525890780b668bc4.jpeg',
+                url: 'https://b23.tv/HLtKjeh'
+            },
+            {
+                title: '我们为什么是马克思主义者',
+                thumbnail: 'https://bee-reg-ab.imagency.cn/e/d8f5a7e06909fe689b22f815d2be0ff9.png',
+                url: 'https://m.acfun.cn/v/?ac=42046206&sid=5f9bfcf91df79f34'
+            }
+        ];
+
+        // 工具函数：从数组中随机选取指定数量的不重复元素
+        const getRandomItems = (arr, count) => {
+            const shuffled = [...arr].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, count);
+        };
+
+        const initWritings = () => {
+            const container = document.getElementById('writings-container');
+            const viewAllLink = document.getElementById('view-all-writings');
+            
+            if (!container) return;
+            
+            // 合并精选文章和系列合集
+            const allItems = [...featuredArticles, ...seriesCollections];
+            
+            // 随机选取3篇
+            const randomItems = getRandomItems(allItems, 3);
+            
+            // 更新文章列表
+            const writingItems = container.querySelectorAll('.writing-item');
+            
+            for (let i = 0; i < randomItems.length; i++) {
+                const item = randomItems[i];
+                const writingItem = writingItems[i];
+                
+                if (writingItem) {
+                    const link = writingItem.querySelector('h3 a');
+                    const meta = writingItem.querySelector('.writing-meta');
+                    
+                    if (link) {
+                        link.textContent = item.title;
+                        link.href = item.link;
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                    }
+                    
+                    if (meta) {
+                        if (item.type === 'article') {
+                            // 精选文章：显示日期和微信公众号
+                            meta.textContent = `${item.date} 微信公众号`;
+                        } else if (item.type === 'series') {
+                             // 系列合集：显示简介，最多41字，超出用...截断
+                             const shortDesc = item.desc.length > 41 
+                                 ? item.desc.substring(0, 41) + '...' 
+                                 : item.desc;
+                             meta.textContent = shortDesc;
+                        }
+                    }
+                }
+            }
+            
+            // 设置"阅读全部文章"链接指向paper.html
+            if (viewAllLink) {
+                viewAllLink.href = 'paper.html';
+            }
+        };
+
+        // 视频板块 - 实时响应窗口变化
+        let videoResizeTimeout = null;
+        let lastVideoCount = 0;
+
+        const renderVideos = () => {
+            const container = document.getElementById('videosGrid');
+            
+            if (!container) return;
+            
+            // 判断是否为移动端
+            const isMobile = window.innerWidth <= 768;
+            // PC端显示6个，移动端显示3个
+            const videoCount = isMobile ? 3 : 6;
+
+            // 如果数量没变，不需要重新渲染
+            if (videoCount === lastVideoCount) return;
+            lastVideoCount = videoCount;
+            
+            // 随机选取视频
+            const randomVideos = getRandomItems(featuredVideos, videoCount);
+            
+            // 清空容器
+            container.innerHTML = '';
+            
+            // 动态创建视频卡片
+            randomVideos.forEach(video => {
+                const article = document.createElement('article');
+                article.className = 'video-item';
+                article.style.cursor = 'pointer';
+                
+                article.innerHTML = `
+                    <div class="video-thumbnail">
+                        <img src="${video.thumbnail}" alt="${video.title}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <h3>${video.title}</h3>
+                `;
+                
+                // 添加点击事件 - 打开视频链接
+                article.addEventListener('click', () => {
+                    window.open(video.url, '_blank');
+                });
+                
+                container.appendChild(article);
+            });
+        };
+
+        // 初始化视频板块 - 从video.html精选视频板块获取视频
+        const initVideos = () => {
+            renderVideos();
+
+            // 添加窗口大小变化监听（防抖）
+            window.addEventListener('resize', () => {
+                if (videoResizeTimeout) {
+                    clearTimeout(videoResizeTimeout);
+                }
+                videoResizeTimeout = setTimeout(renderVideos, 200);
+            });
+        };
+
+        const initWechatModal = () => {
+            const wechatLink = document.getElementById('wechat-link');
+            const wechatModal = document.getElementById('wechat-modal');
+            const closeBtn = document.querySelector('.modal-close');
+            
+            const openModal = () => {
+                wechatLink.style.color = 'var(--color-red)';
+                wechatModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            };
+            
+            const closeModal = () => {
+                wechatLink.style.color = '';
+                wechatModal.classList.remove('active');
+                document.body.style.overflow = '';
+            };
+            
+            if (wechatLink && wechatModal) {
+                wechatLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openModal();
+                });
+                
+                closeBtn?.addEventListener('click', closeModal);
+                
+                wechatModal.addEventListener('click', (e) => {
+                    if (e.target === wechatModal) {
+                        closeModal();
+                    }
+                });
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && wechatModal.classList.contains('active')) {
+                        closeModal();
+                    }
+                });
+            }
+        };
+
+        const initBilibiliModal = () => {
+            const bilibiliLink = document.getElementById('bilibili-link');
+            const bilibiliModal = document.getElementById('bilibili-modal');
+            const closeBtn = document.querySelector('.bilibili-close');
+            
+            const openModal = () => {
+                bilibiliLink.style.color = 'var(--color-red)';
+                bilibiliModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            };
+            
+            const closeModal = () => {
+                bilibiliLink.style.color = '';
+                bilibiliModal.classList.remove('active');
+                document.body.style.overflow = '';
+            };
+            
+            if (bilibiliLink && bilibiliModal) {
+                bilibiliLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openModal();
+                });
+                
+                closeBtn?.addEventListener('click', closeModal);
+                
+                bilibiliModal.addEventListener('click', (e) => {
+                    if (e.target === bilibiliModal) {
+                        closeModal();
+                    }
+                });
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && bilibiliModal.classList.contains('active')) {
+                        closeModal();
+                    }
+                });
+            }
+        };
+
+        const initContactModal = () => {
+            const contactLink = document.getElementById('contact-link');
+            const contactModal = document.getElementById('contact-modal');
+            const closeBtn = document.querySelector('.contact-close');
+            
+            const openModal = () => {
+                contactLink.style.color = 'var(--color-red)';
+                contactModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            };
+            
+            const closeModal = () => {
+                contactLink.style.color = '';
+                contactModal.classList.remove('active');
+                document.body.style.overflow = '';
+            };
+
+            // 点击复制联系方式
+            const initCopyContact = () => {
+                const contactItems = contactModal.querySelectorAll('.contact-item');
+                contactItems.forEach((item) => {
+                    item.addEventListener('click', async () => {
+                        const valueEl = item.querySelector('.contact-value');
+                        if (!valueEl) return;
+                        
+                        const text = valueEl.textContent.trim();
+                        try {
+                            await navigator.clipboard.writeText(text);
+                            
+                            // 显示复制成功提示
+                            const labelEl = item.querySelector('.contact-label');
+                            const originalLabel = labelEl?.textContent || '';
+                            if (labelEl) {
+                                labelEl.textContent = '已复制!';
+                                labelEl.style.color = 'var(--color-red)';
+                            }
+                            
+                            // 重置标签文字
+                            setTimeout(() => {
+                                if (labelEl) {
+                                    labelEl.textContent = originalLabel;
+                                    labelEl.style.color = '';
+                                }
+                            }, 2000);
+                        } catch (err) {
+                            console.error('复制失败:', err);
+                        }
+                    });
+                });
+            };
+            
+            if (contactLink && contactModal) {
+                contactLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openModal();
+                });
+                
+                closeBtn?.addEventListener('click', closeModal);
+                
+                contactModal.addEventListener('click', (e) => {
+                    if (e.target === contactModal) {
+                        closeModal();
+                    }
+                });
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && contactModal.classList.contains('active')) {
+                        closeModal();
+                    }
+                });
+
+                // 初始化复制功能
+                initCopyContact();
+            }
+        };
+
+        // 隐私政策弹窗
+        const initPrivacyModal = () => {
+            const privacyLinks = document.querySelectorAll('a[href="#privacy"], .footer-links a:first-child');
+            const privacyModal = document.getElementById('privacy-modal');
+            const closeBtn = privacyModal?.querySelector('.modal-close');
+            
+            const openModal = () => {
+                privacyModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            };
+            
+            const closeModal = () => {
+                privacyModal.classList.remove('active');
+                document.body.style.overflow = '';
+            };
+            
+            if (privacyModal) {
+                privacyLinks.forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        openModal();
+                    });
+                });
+                
+                closeBtn?.addEventListener('click', closeModal);
+                
+                privacyModal.addEventListener('click', (e) => {
+                    if (e.target === privacyModal) {
+                        closeModal();
+                    }
+                });
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && privacyModal.classList.contains('active')) {
+                        closeModal();
+                    }
+                });
+            }
+        };
+
+        // 服务条款弹窗
+        const initTermsModal = () => {
+            const termsLinks = document.querySelectorAll('a[href="#terms"], .footer-links a:nth-child(2)');
+            const termsModal = document.getElementById('terms-modal');
+            const closeBtn = termsModal?.querySelector('.modal-close');
+            
+            const openModal = () => {
+                termsModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            };
+            
+            const closeModal = () => {
+                termsModal.classList.remove('active');
+                document.body.style.overflow = '';
+            };
+            
+            if (termsModal) {
+                termsLinks.forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        openModal();
+                    });
+                });
+                
+                closeBtn?.addEventListener('click', closeModal);
+                
+                termsModal.addEventListener('click', (e) => {
+                    if (e.target === termsModal) {
+                        closeModal();
+                    }
+                });
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && termsModal.classList.contains('active')) {
+                        closeModal();
+                    }
+                });
+            }
+        };
+
+        // 友情链接弹窗
+        const initLinksModal = () => {
+            const linksLinks = document.querySelectorAll('a[href="#links"], .footer-links a:nth-child(3)');
+            const linksModal = document.getElementById('links-modal');
+            const closeBtn = linksModal?.querySelector('.modal-close');
+            
+            const openModal = () => {
+                linksModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            };
+            
+            const closeModal = () => {
+                linksModal.classList.remove('active');
+                document.body.style.overflow = '';
+            };
+            
+            if (linksModal) {
+                linksLinks.forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        openModal();
+                    });
+                });
+                
+                closeBtn?.addEventListener('click', closeModal);
+                
+                linksModal.addEventListener('click', (e) => {
+                    if (e.target === linksModal) {
+                        closeModal();
+                    }
+                });
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && linksModal.classList.contains('active')) {
+                        closeModal();
+                    }
+                });
+            }
+        };
+
+        // 作品板块功能
+        const worksModule = (function() {
+            // 作品数据（从work.html获取的前三个作品）
+            const worksData = [
+                {
+                    name: '译灵',
+                    thumbnail: 'https://i.imgs.ovh/2026/06/07/6e5024d7fe2e51ec608e81aba3339a59.jpg',
+                    description: '在传统的编程世界里，从"想法"到"可运行的程序"之间隔着语法、算法、框架和调试——这些技术壁垒让无数创意止步于"如果我会编程就好了"的叹息。'
+                },
+                {
+                    name: 'iTest Pro',
+                    thumbnail: 'https://testerhome.com/uploads/photo/2025/6a300fc8-1b3e-4361-9295-3d779d3f786b.jpeg!large',
+                    description: 'iTest Pro 是一个功能全面集成化的智能移动设备测试与诊断平台。它最初是团队内部使用的专业工具，现已完全开源。'
+                },
+                {
+                    name: 'WebRecon Pro',
+                    thumbnail: 'https://i.imgs.ovh/2026/06/07/ccb18d12d87988603169db2220de62d2.png',
+                    description: 'WebRecon Pro 是一个基于浏览器的网页脚本扫描工具。采用模块化设计理念，支持自动扫描页面敏感信息、深度递归扫描多层文件。'
+                }
+            ];
+
+            // 初始化作品板块
+            const initWorks = () => {
+                const workCards = document.querySelectorAll('.work-card');
+                
+                workCards.forEach((card, index) => {
+                    if (worksData[index]) {
+                        const work = worksData[index];
+                        const imageDiv = card.querySelector('.work-image');
+                        const title = card.querySelector('h3');
+                        const desc = card.querySelector('p');
+                        
+                        // 设置缩略图
+                        if (imageDiv && work.thumbnail) {
+                            imageDiv.innerHTML = '';
+                            const img = document.createElement('img');
+                            img.src = work.thumbnail;
+                            img.alt = work.name;
+                            img.style.width = '100%';
+                            img.style.height = '100%';
+                            img.style.objectFit = 'cover';
+                            imageDiv.appendChild(img);
+                        }
+                        
+                        // 设置名称
+                        if (title) {
+                            title.textContent = work.name;
+                        }
+                        
+                        // 设置简介（截取前100字符）
+                        if (desc && work.description) {
+                            const shortDesc = work.description.substring(0, 100) + '...';
+                            desc.textContent = shortDesc;
+                        }
+                    }
+                });
+            };
+
+            return {
+                initWorks
+            };
+        })();
+
+        // 点击作品卡片跳转到work.html并定位到对应作品
+        window.goToWork = function(index) {
+            window.location.href = `work.html#work-${index}`;
+        };
+
+        // ========== 评测板块数据 ==========
+        const reviewData = [
+            {
+                title: '荒野大镖客2',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/1174180/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=e89e6dd09df1'
+            },
+            {
+                title: '侠盗猎车手V',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/271590/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=20d96dd09e53'
+            },
+            {
+                title: '模拟人生4',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/1222670/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=626e6dd09ec3'
+            },
+            {
+                title: '赛博朋克2077',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/1091500/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://www.xiaoheihe.cn/app/bbs/link/f0756de389fe?h_camp=link&h_src=YXBwX3NoYXJl'
+            },
+            {
+                title: '星球大战 绝地：陨落的武士团',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/1172380/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://www.xiaoheihe.cn/app/bbs/link/3ea76e6cd252?h_camp=link&h_src=YXBwX3NoYXJl'
+            },
+            {
+                title: '刺客信条：枭雄',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/368500/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://www.xiaoheihe.cn/app/bbs/link/efdb6e9ba28c?h_camp=link&h_src=YXBwX3NoYXJl'
+            },
+            {
+                title: '只狼：影逝二度',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/814380/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://www.xiaoheihe.cn/app/bbs/link/b4246ea958bb?h_camp=link&h_src=YXBwX3NoYXJl'
+            },
+            {
+                title: '极限竞速：地平线 5',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/1551360/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=37746eb8a29c'
+            },
+            {
+                title: '对马岛之魂：导演剪辑版',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/2215430/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=d12b6edc84cf'
+            },
+            {
+                title: '杀手：暗杀世界',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/1659040/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=02c36edc850c'
+            },
+            {
+                title: '无人深空',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/275850/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=9f716f424296'
+            },
+            {
+                title: '装甲核心6',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/1888160/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=10d56f5ae118'
+            },
+            {
+                title: '博德之门3',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/1086940/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=421c6f524fed'
+            },
+            {
+                title: '黑神话：悟空',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/2358720/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=11096ef65db8'
+            },
+            {
+                title: '剑星',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/3489700/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 4,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=2c9370875abf'
+            },
+            {
+                title: '寂静岭 f',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/2947440/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 4,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=eec471a50cc6'
+            },
+            {
+                title: '绝地潜兵',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/553850/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 5,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=4e466f83ea63'
+            },
+            {
+                title: '战地风云™ 2042',
+                cover: 'https://steamcdn-a.akamaihd.net/steam/apps/1517290/library_600x900_2x.jpg',
+                tag: '游戏',
+                rating: 4,
+                link: 'https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=55b16f451314'
+            }
+        ];
+
+        // 生成星星评分
+        function generateStars(rating) {
+            let stars = '';
+            for (let i = 1; i <= 5; i++) {
+                stars += i <= rating ? '<span class="star filled">★</span>' : '<span class="star">☆</span>';
+            }
+            return stars;
+        }
+
+        // 评测板块 - 实时响应窗口变化
+        let reviewResizeTimeout = null;
+        let lastReviewCount = 0;
+
+        const renderReviews = () => {
+            const reviewsGrid = document.getElementById('reviewsGrid');
+            if (!reviewsGrid) return;
+
+            // 判断是否为移动端
+            const isMobile = window.innerWidth <= 768;
+            // PC端显示3个，移动端显示4个
+            const reviewCount = isMobile ? 4 : 3;
+
+            // 如果数量没变，不需要重新渲染
+            if (reviewCount === lastReviewCount) return;
+            lastReviewCount = reviewCount;
+
+            // 随机选择评测
+            const shuffled = [...reviewData].sort(() => Math.random() - 0.5);
+            const selectedReviews = shuffled.slice(0, reviewCount);
+
+            // 清空容器
+            reviewsGrid.innerHTML = '';
+
+            // 生成评测卡片
+            selectedReviews.forEach((review) => {
+                const card = document.createElement('article');
+                card.className = 'review-card';
+
+                card.innerHTML = `
+                    <img src="${review.cover}" alt="${review.title}" class="review-cover">
+                    <div class="review-content">
+                        <div>
+                            <p class="review-category">${review.tag}</p>
+                            <h3>${review.title}</h3>
+                        </div>
+                        <p class="review-rating">${generateStars(review.rating)}</p>
+                    </div>
+                `;
+
+                // 添加点击跳转事件
+                card.addEventListener('click', () => {
+                    window.open(review.link, '_blank');
+                });
+
+                reviewsGrid.appendChild(card);
+            });
+        };
+
+        // 初始化评测板块
+        function initReviews() {
+            renderReviews();
+
+            // 添加窗口大小变化监听（防抖）
+            window.addEventListener('resize', () => {
+                if (reviewResizeTimeout) {
+                    clearTimeout(reviewResizeTimeout);
+                }
+                reviewResizeTimeout = setTimeout(renderReviews, 200);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initChinaMap();
+            initQuote();
+            initWritings();
+            initVideos();
+            initWechatModal();
+            initBilibiliModal();
+            initContactModal();
+            initPrivacyModal();
+            initTermsModal();
+            initLinksModal();
+            worksModule.initWorks();
+            initReviews();
+            initHomeGallery();
+        });
+
+        // ========== 主页画廊板块 - 瞬间与插画随机展示 ==========
+        
+        // 瞬间板块数据
+        const homeMomentsData = [
+            { src: 'https://bee-reg-ab.imagency.cn/e/c2861c21e9f588723813ba16f5360279.jpeg', title: '武侯祠', date: '2025.10.02', location: '成都市', story: '那天的阳光穿过古柏的枝叶，在青石板路上投下斑驳的光影，我站在诸葛亮殿前，对着镜头按下了快门。身后"名垂宇宙"的匾额下，游人往来如织，香火与草木的气息混在一起，是千年不变的热闹与肃穆。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/d882f5a05ef4131cc6147b429716a195.jpeg', title: 'IFS大熊猫', date: '2025.10.03', location: '成都市', story: '夜色像一块温柔的幕布，把IFS的灯火衬得格外耀眼，这只从高楼探出头的大熊猫，也被暖黄的灯光勾勒得格外可爱。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/7c64c4de937dddb9405b41b3d485baa0.jpeg', title: '黑云压城', date: '2026.04.04', location: '西安市', story: '那天的云压得极低，像一整块铅灰色的幕布，沉沉地罩在大明宫遗址的上空。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/a391cccdca8e049e2216a1c3304d76dc.jpeg', title: '大明宫前', date: '2026.04.04', location: '西安市', story: '我独自站在空旷的石板地上，背后的青砖城墙层层叠叠，斑驳的砖缝里藏着千年的风霜。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/d601fdf6160920b2d9ebcc77d7a8e55f.jpeg', title: '红尘客栈', date: '2026.04.05', location: '西安市', story: '站在西安城墙上，风从箭楼的飞檐下穿过，带着千年的回响。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/4109b7be95296850b3ceb92252b97780.jpeg', title: '与兵马俑对视', date: '2026.04.05', location: '西安市', story: '终于站在了兵马俑面前，那些跨越千年的眼眸，静静凝视着这个世界。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/a03e9236a489ce3bc47e2e6ea922038b.jpeg', title: '鼓楼下', date: '2026.04.05', location: '西安市', story: '夜晚的西安鼓楼被灯火点亮，飞檐翘角在夜色里铺开盛唐的模样。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/ec41f66b67007cf23aee58641497af14.jpeg', title: '青龙寺的早春', date: '2026.04.04', location: '西安市', story: '青龙寺的早春，樱花盛开，满园春色。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/6e0d9cb5e73e863d4f7d04ba82e74902.jpeg', title: '古城长安', date: '2026.04.05', location: '西安市', story: '身旁的兵马俑静静伫立，金甲映着天光，像千年前的武士，守着这座城的故事。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/e686a4c047d2718e2e8986fcaeca2375.jpeg', title: '名画猫猫', date: '2026.05.01', location: '无锡市', story: '走在无锡的街头，转角就撞见了这只"戴珍珠耳环的少女猫"。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/c5e6aae02d2d801bb7d2d8cbc81b7c0c.jpeg', title: '江南老友记', date: '2026.05.01', location: '无锡市', story: '江南老友记，岁月如歌。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/5a0fa64122ab4304968e1bcc230a00cd.jpeg', title: '太湖之夜', date: '2026.05.01', location: '无锡市', story: '太湖之夜的灯火，映照着水面的波光。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/12f66eb0bc73f6eddc6564975b31915d.jpeg', title: '忆江南', date: '2026.05.01', location: '无锡市', story: '晚风裹着水汽，吹过江南的河道，也吹软了夕阳的光。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/054b2d35c75a9b455f065e8ed976ccd4.jpeg', title: '东方紫', date: '2026.05.03', location: '上海市', story: '东方的紫色，神秘而高贵。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/b27d9a1037771aeea2329e7b6daa18ec.jpeg', title: '西藏中路', date: '2026.05.03', location: '上海市', story: '站在西藏中路的路口，一个转身，竟把上海的四种模样都框进了同一张画面里。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/19c6882a42674b664c414339ab2522f3.jpeg', title: '浦东Citywalk', date: '2026.05.03', location: '上海市', story: '我站在高处的观景台上，面前的上海天际线在灰蒙蒙的天光里铺展开来。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/6a9d49a377f3a6d519b31ec4bef8e3c8.jpeg', title: '陆家嘴', date: '2026.05.03', location: '上海市', story: '陆家嘴的摩天大楼，直插云霄。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/eea9c9bd2b684809ceb25c9d1914fbcd.jpeg', title: '长安少年', date: '2026.04.04', location: '西安市', story: '终于站在了"长安"两个字面前，身旁是复刻的兵马俑，一身金甲，目光沉静。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/31b85857ffc37aceee1c99495a566fee.jpeg', title: '北海道的雪', date: '2025.11.28', location: '札幌市', story: '我第一次在这座北国城市见到雪，就是这样猝不及防的模样。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/1a2f9fe9632dc56b8231f1f91eb9b889.jpeg', title: '重庆母城', date: '2025.12.31', location: '重庆市', story: '跨年夜的解放碑，被暖黄的灯光揉成了一片温柔的海。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/6d2ea2caf2a4521846986f13ccab1ce5.jpeg', title: '胯下之辱', date: '2026.05.03', location: '苏州市', story: '身后的东方之门如同一道巨大的拱门，高高悬在头顶。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/78d466a6aec789fb16e16ca6b9253ed1.jpeg', title: '千厮门下', date: '2025.11.08', location: '重庆市', story: '站在江风里，眼前是被夜色点亮的洪崖洞，身前是跨江而过的千厮门大桥。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/4dcca78b17da9cd8f8e36f1be9833b83.jpeg', title: '杭州之门', date: '2026.05.05', location: '杭州市', story: '站在杭州之门的脚下，才真正感受到这两座双子塔的震撼。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/c25fe08252daaa218e0a359292e64d8f.jpeg', title: '上海的十字路口', date: '2026.05.04', location: '上海市', story: '仰起头，才真正看清这座城市的轮廓。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/c5524bdb0d087a4ceca0233cf0fdde73.jpeg', title: '刺客信条', date: '2025.10.30', location: '重庆市', story: '终于站在了这枚标志前，墙上的银色徽标，是我从少年时代就刻在心里的信仰符号。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/05b84a6aaa849a8ff0cca568fc7839e6.jpg', title: '右江畔', date: '2020.04.20', location: '南宁市', story: '江边的风带着水汽，吹得镜头也朦胧起来。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/beff1efc64cc90925bfe98ecff5ef293.jpeg', title: '东方之门', date: '2026.05.02', location: '苏州市', story: '苏州的东方之门，古典与现代的完美融合。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/88dcdd42f0f72844fd3f8cebc0c9f5b9.jpg', title: '情人桥', date: '2026.02.14', location: '杭州市', story: '情人节这天，我独自走过西湖边的情人桥，湖面映着两个人的倒影。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/787017da52727584c1c72e1a12a58e96.jpg', title: '千禧年', date: '2026.04.16', location: '上海市', story: '站在外滩，看对面的万国建筑群在夕阳下泛着金光，像是从旧时光里走来的绅士。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/05b84a6aaa849a8ff0cca568fc7839e6.jpg', title: '右江畔', date: '2020.04.20', location: '南宁市', story: '江边的风带着水汽，吹得镜头也朦胧起来。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/649ac1d56f18dd30330e58438c4258b3.jpeg', title: '19届亚运会', date: '2026.05.05', location: '杭州市', story: '亚运会的余温还未散去，这座城市依然洋溢着运动的热情。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/c10823d2e4c7fe9305644daac55adc48.jpeg', title: '壁画上的大海', date: '2026.05.05', location: '杭州市', story: '地铁站的壁画，描绘着杭州与海的遥远想象。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/8c596280ce8e317302835e15196f2e4d.jpeg', title: '你问西湖水', date: '2026.05.05', location: '杭州市', story: '你问西湖水，是否记得我来过。那些涟漪，大概就是答案。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/561f5c0b49adecac6ad8a30006532eec.jpeg', title: '西湖畔', date: '2026.05.05', location: '杭州市', story: '清晨的西湖边，薄雾笼罩着远处的山峦，像一幅泼墨山水画。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/cb58c8fd0d1a1d71b6eb54609971dda1.jpeg', title: '摇曳西湖', date: '2026.05.05', location: '杭州市', story: '湖面的荷花在风中摇曳，阳光透过花瓣，洒下一片金黄。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/9f3852c87c2d5b8afad39cbab232d5c4.jpeg', title: '德寿宫红墙', date: '2026.05.05', location: '杭州市', story: '德寿宫的红墙在阳光下格外耀眼，像凝固的历史。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/cc9359b5d69b9d43b5a9b8e224eeab0e.jpeg', title: '天命人', date: '2026.05.05', location: '杭州市', story: '游戏里的天命人，在现实中找到了自己的舞台。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/ce1ee523ea0b7816778445b7ed377720.jpeg', title: '西湖断桥', date: '2026.05.05', location: '杭州市', story: '断桥残雪虽无雪，但那份诗意依然在心中流淌。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/447691bb713ee2ab07084a24eea83d14.jpeg', title: '钱塘江畔', date: '2026.05.05', location: '杭州市', story: '钱塘江的水天一色，让人心旷神怡。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/6dccfee72f0a4e0ed7ecfe6acd301f83.jpeg', title: '西湖绿荫', date: '2026.05.05', location: '杭州市', story: '沿着苏堤漫步，两岸的绿荫把阳光筛成斑驳的光点。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/8ccd0bda6d240ef808203f761a074ef9.jpeg', title: '我和丞相', date: '2025.10.02', location: '成都市', story: '在成都的武侯祠，我与诸葛亮的雕像合影，圆了少年时代的梦。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/1245b17a8f49f797b5543ad85259f819.jpeg', title: '双子塔前', date: '2025.10.03', location: '成都市', story: '成都的双子塔，在夜色中闪烁着现代的光芒。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/7545dfada3fb81bdf8931811d9bfcde2.jpeg', title: '玉林路', date: '2025.10.03', location: '成都市', story: '成都的玉林路，小酒馆的门口，是否也会有我的故事。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/15e33f7a2401e4c0f6c6cda633f267e8.jpeg', title: '九眼桥', date: '2025.10.04', location: '成都市', story: '九眼桥下的酒吧街，霓虹灯倒映在锦江上，流光溢彩。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/f811a0f3a03f02594c86b348ccb29a4e.jpeg', title: '《成都》', date: '2025.10.03', location: '成都市', story: '在成都的街头走一走，直到所有的灯都熄灭了也不停留。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/a5e8bc1b2ceb07ae7edd2597d8f4fd09.jpeg', title: '杜甫草堂', date: '2025.10.02', location: '成都市', story: '走进杜甫草堂，仿佛能听见千年前的诗声在回响。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/3cdc188f8325dbde41f379ecccd99e4a.jpeg', title: '捡到只猫', date: '2023.06.10', location: '成都市', story: '在成都的街头，意外遇见这只小橘猫，它用琥珀色的眼睛望着我。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/0086a240a9763331108d98cfbcf5f113.jpeg', title: 'I LOVE U', date: '2026.05.03', location: '上海市', story: '外滩的"I LOVE SH"字样前，留下我的城市告白。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/6f4705409bb18701482433291e66d24c.jpeg', title: 'Epstein', date: '2026.05.03', location: '上海市', story: '这个名字背后，藏着一段上海滩的传奇往事。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/642980eacf3a6ed2b1b763c9e3b5ffd8.jpeg', title: '夜上海', date: '2026.05.03', location: '上海市', story: '夜幕降临，外滩的灯火次第亮起，像一条流动的银河。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/dc182f23ee8ff70d8a6c98b5034fe0f6.jpeg', title: '上海吴世勋', date: '2026.05.03', location: '上海市', story: '地铁站里那张海报，让我想起了追星的少年时代。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/2a607439588a200107e84a8cb35dc1d9.jpeg', title: '黄浦江畔', date: '2026.05.03', location: '上海市', story: '站在黄浦江畔，看对面陆家嘴的摩天大楼倒映在水面上。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/e8ce1afee4ee5826681f85a2bebbf560.jpeg', title: '一江之隔', date: '2026.05.03', location: '上海市', story: '一江之隔，是两种风情——浦西的厚重，浦东的繁华。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/09b9af68447b793707b2c5a69f50eb22.jpeg', title: '魔都之夜', date: '2026.05.03', location: '上海市', story: '魔都的夜，总有看不完的霓虹和故事。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/4d100af30901703619234dc38b13be5e.jpeg', title: '下班回家', date: '2026.05.04', location: '上海市', story: '下班高峰的上海地铁，每个人都带着各自的故事。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/2d24b750d587db44eb6c16a5bf85e969.jpeg', title: '东方明珠', date: '2026.05.04', location: '上海市', story: '东方明珠塔在晨雾中若隐若现，像一位害羞的少女。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/817e0c6591fb10abe05e0a6c2f0e7a24.jpeg', title: '明珠之下', date: '2026.05.04', location: '上海市', story: '仰望着东方明珠，才发现自己如此渺小。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/bae0d2c85fecfaa5c12e05148749caec.jpeg', title: '你好浦东', date: '2026.05.04', location: '上海市', story: '浦东，我来了。这座新城的崛起，是中国速度最好的证明。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/a634ab40955a15d29d274ae304cfc228.jpeg', title: '送别长江', date: '2026.05.04', location: '上海市', story: '站在吴淞口，看长江之水滚滚东流入海。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/8cfeb3ea5bd20b5f41efc479885bb5e3.jpeg', title: '五四纪念', date: '2026.05.04', location: '上海市', story: '五月的阳光洒在纪念碑上，青春的力量在此汇聚。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/3a0af1a021e162ab7bd1e461c6a4fd7e.jpeg', title: '辞别魔都', date: '2026.05.04', location: '上海市', story: '离开上海的那天，天空格外晴朗，像是在说再见。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/3cbd0f670f4e36aed0b4b9c6365de45f.jpeg', title: '登顶申城', date: '2026.05.04', location: '上海市', story: '登高望远，整座上海尽收眼底，这座城市的故事还在继续。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/5a25b3a43399fe80dddb550814724e1e.jpeg', title: '黄浦江边', date: '2026.05.04', location: '上海市', story: '黄昏时分的黄浦江边，有人匆匆走过，有人驻足拍照。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/04ea1d027cde9ad8508ec1148be2ed55.jpeg', title: '黄浦江滨', date: '2026.05.04', location: '上海市', story: '江滨的步道上，跑步的人们与悠闲的游客擦肩而过。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/c14eb817e47bface14e412ed0e36d1c5.jpeg', title: '上海中心', date: '2026.05.04', location: '上海市', story: '上海中心大厦直插云霄，是这座城市向上的野心。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/38808c8c2683763ebae2027f3ec9a163.jpeg', title: '太平洋', date: '2026.05.04', location: '上海市', story: '虽说是太平洋，但其实离真正的海还很远。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/53500a415adc95323de55414e064bb88.jpeg', title: '我爱上海', date: '2026.05.04', location: '上海市', story: '上海，我爱你。不是因为你的繁华，而是因为你的包容。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/dcafd8fc8b8f80254c66f3fbda44fe38.jpeg', title: '日落浦东', date: '2026.05.04', location: '上海市', story: '日落时分，浦东的天际线被染成金红色，美得让人窒息。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/b04610500f49dd5a44d5581de82dcdc4.jpeg', title: '无锡一角', date: '2026.05.01', location: '无锡市', story: '无锡的一角，是我心中江南最美的模样。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/3f4595810cc73a3bcc733cf1d78faa63.jpeg', title: '中国甜都', date: '2026.05.01', location: '无锡市', story: '无锡，中国甜都。连空气里都弥漫着甜蜜的味道。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/6eacc636b73dff5522f86313a10039e4.jpeg', title: '江南旅人', date: '2026.05.01', location: '无锡市', story: '我是一个江南旅人，走过一座座水乡，留下一个个故事。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/10f8004ddd1b37d2c747a444bba04f16.jpeg', title: '古运河上', date: '2026.05.01', location: '无锡市', story: '乘船游览古运河，两岸的明清建筑诉说着往日的繁华。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/fa2268f5673aa1498b3aa2778bb72b24.jpeg', title: '非撞不可的南墙', date: '2026.05.01', location: '无锡市', story: '有些事，不撞南墙不回头。那就撞吧，反正还年轻。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/8b6ac680da8feb84d9ef33769163a491.jpeg', title: '太湖"出海"', date: '2026.05.01', location: '无锡市', story: '太湖虽不是海，但它的浩渺同样让人心潮澎湃。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/5e3c7f237d9f8f298569ed43d853310e.jpeg', title: '鹿顶迎晖', date: '2026.05.01', location: '无锡市', story: '鹿顶山上看日出，迎接第一缕阳光照进太湖。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/f605dc0a2bbec75b98fdeb6db65df607.jpeg', title: '鼋头渚上', date: '2026.05.01', location: '无锡市', story: '站在鼋头渚，远眺太湖，水天一色，心旷神怡。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/2e815501524c3173eb461c223866b657.jpeg', title: '无锡留念', date: '2026.05.01', location: '无锡市', story: '无锡，这座小城，藏着太多我舍不得离开的理由。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/55208b5ede52d43c8494c8e43d37f6fa.jpeg', title: '白墙黑瓦', date: '2026.05.01', location: '无锡市', story: '白墙黑瓦，是江南最经典的配色。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/31cf984ff9181f09486798f127eafeb5.jpeg', title: '小桥流水', date: '2026.05.01', location: '无锡市', story: '小桥流水人家，这是我对江南最初的想象。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/fbaaafac254f911bb7252ad12fb60650.jpeg', title: '江南黄昏', date: '2026.05.01', location: '无锡市', story: '江南的黄昏，是一首写不完的诗。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/e8089be77f70579e6f9dd82656940525.jpeg', title: '古镇祠堂', date: '2026.05.01', location: '无锡市', story: '古镇的祠堂里，供奉着这个家族几代人的记忆。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/acff07118674b30f805df3df7e58fb23.jpeg', title: '无锡的"海"', date: '2026.05.01', location: '无锡市', story: '在无锡，不用去海边，太湖就是我们的海。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/1dec3d2bf2493a63d30d4ae1c77d8401.jpeg', title: '太湖留念', date: '2026.05.01', location: '无锡市', story: '太湖边，我留下了一张到此一游的照片。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/5a694126be6823d73a275ab9d1e0e29a.jpeg', title: '鼋头渚留念', date: '2026.05.01', location: '无锡市', story: '鼋头渚，是无锡的名片，也是我相册里的常客。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/c58cfad224788a6e3973df8007a1f01a.jpeg', title: '一位劳动者', date: '2026.05.01', location: '无锡市', story: '劳动者的背影，是这座城市最动人的风景。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/7caddc1e9d87961d0cf8c686bca4bf91.jpeg', title: '青龙寺赏花', date: '2026.04.04', location: '西安市', story: '青龙寺的樱花下，我许下了一个关于春天的愿望。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/6cef2837f8793bbf08062de58c1027fd.jpeg', title: '千宫之宫', date: '2026.04.04', location: '西安市', story: '大明宫，曾是世界上最大的宫殿建筑群，如今只剩遗址。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/d8f83e959673a0723e493f4a1471d5c3.jpeg', title: '大雁塔', date: '2026.04.04', location: '西安市', story: '大雁塔下，玄奘译经的声音似乎还在回响。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/c52e6cb17826b401203b1a88974652f9.jpeg', title: '大唐不夜城', date: '2026.04.04', location: '西安市', story: '大唐不夜城的灯火，照亮了长安千年的繁华梦。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/d9570ec87c530ceec6810b85de19f3d4.jpeg', title: '大唐高僧', date: '2026.04.04', location: '西安市', story: '大唐高僧的雕像前，我仿佛看见了取经路上的风霜。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/84cfbfbbe1b35f5cf6ab3d2c4940d049.jpeg', title: '现代西安', date: '2026.04.05', location: '西安市', story: '西安，一座古典与现代完美交融的城市。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/f94fb2f3b2ac1c9586450fefb8be5744.jpeg', title: '西安钟楼', date: '2026.04.05', location: '西安市', story: '西安钟楼，是古城的中心，也是时间的见证者。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/90d05ee1dcb3811e8c53a36830f41151.jpeg', title: '札幌早冬', date: '2025.11.28', location: '札幌市', story: '札幌的早冬，比想象中来得更早一些。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/281e99cfdedcca5d9995c25c480a98a2.jpeg', title: '你好日本', date: '2025.11.28', location: '日本', story: '日本，我来了。这个国家有太多我想了解的故事。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/c8bca0d35873408b1b2f72bf65065da9.jpeg', title: '辞别华南', date: '2026.06.30', location: '华南', story: '离开华南的那天，回首望去，满是不舍。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/4e9d5ebaffedf1711f57ed3148b5a1e6.jpeg', title: '你好苏州', date: '2026.05.02', location: '苏州市', story: '苏州，我来了。这座园林之城，会给我怎样的惊喜？' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/ce000069d6bcd31e0179acb5327f7590.jpeg', title: '大运河旁', date: '2026.05.02', location: '苏州市', story: '站在大运河旁，看千年水脉流淌不息。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/fc4128b72513af0a600f3a1fc0f499a4.jpeg', title: '拙政园', date: '2026.05.02', location: '苏州市', story: '拙政园的一步一景，让我真正理解了什么叫"诗情画意"。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/079d9d955e039a29fdaa478cb726d69a.jpeg', title: 'surprise', date: '2026.05.02', location: '苏州市', story: '苏州总能给人惊喜，比如转角遇见的那片花海。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/dc895b59531b9bf797bf371ecb1b51fd.jpeg', title: '金鸡湖畔', date: '2026.05.02', location: '苏州市', story: '金鸡湖的夜色，是苏州现代化最美好的注脚。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/b5f81b8ca188735ce3060f1fe22805d0.jpeg', title: '等烟雨', date: '2026.05.02', location: '苏州市', story: '等烟雨，等一个人，等一段故事在苏州发生。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/69ce5de03889cf7fb505256c95d712ff.jpeg', title: '隔湖相望', date: '2026.05.02', location: '苏州市', story: '隔湖相望，远处的城市灯火在水中摇曳。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/a48124a6b89cc68431305fee1f671eed.jpeg', title: '摩天轮下', date: '2026.05.02', location: '苏州市', story: '在摩天轮下许个愿，希望它能转出我的幸福。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/6419a7b8cf598d184acc306519dd0357.jpeg', title: '苏州之眼', date: '2026.05.02', location: '苏州市', story: '苏州之眼，缓缓转动，把整座城市的风景都看遍。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/a9541b28b4701424debd43b511a54bc1.jpeg', title: '艺术苏州', date: '2026.05.02', location: '苏州市', story: '苏州的文化艺术，从古典走向现代，从中国走向世界。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/693e1f4467fb9972aadc1ce2dd3551df.jpeg', title: '多少楼台烟雨中', date: '2026.05.02', location: '苏州市', story: '南朝四百八十寺，多少楼台烟雨中。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/d382e45dcccda93be8c9943759ff2fed.jpeg', title: '京杭运河', date: '2026.05.02', location: '苏州市', story: '京杭运河，是古代的"高速公路"，也是南北交流的大动脉。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/3af4047ba0de6c5435ebef08d83a671c.jpeg', title: '我爱姑苏', date: '2026.05.02', location: '苏州市', story: '姑苏城外的寒山寺，钟声是否还在回响？' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/6c5d7be3c6fd189a4645a93041c314f0.jpeg', title: '运河小憩', date: '2026.05.02', location: '苏州市', story: '运河边小憩，看船来船往，时光仿佛慢了下来。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/b9ab256d05ef442bfc32899e4519cef0.jpeg', title: '天青色', date: '2026.05.02', location: '苏州市', story: '天青色等烟雨，而我在等一个苏州的晴天。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/418f5af2442c535a3ea15e7811308ba2.jpeg', title: '园林之城', date: '2026.05.02', location: '苏州市', story: '苏州是园林之城，每一座园林都是一个诗意的世界。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/5fd1979d84eb1c35fd5a45ed33d968db.jpeg', title: '古城姑苏', date: '2026.05.02', location: '苏州市', story: '古城姑苏，藏着中国人最浪漫的想象。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/cb2e38dd40a3f579d4b91565e7125147.jpeg', title: '苏州CityWalk', date: '2026.05.02', location: '苏州市', story: '在苏州来一场CityWalk，用脚步丈量这座千年古城。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/b225701f5e6aa97817268532c5fd01bd.jpeg', title: '汉口站', date: '2026.05.02', location: '武汉市', story: '汉口站，承载着多少人的离别与重逢。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/0b371c6a17f9fb774175f8f97e4266b2.jpg', title: '初遇山城', date: '2025.07.03', location: '重庆市', story: '初遇山城，那层层叠叠的道路，让我惊叹不已。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/9546c1aa342476dfbc27d8f030a1a09d.jpg', title: '长江山城', date: '2025.07.03', location: '重庆市', story: '长江边的山城，每一帧都是电影画面。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/9e57f585efaac9222dabab7d4db4a620.jpg', title: '朝天门', date: '2025.07.03', location: '重庆市', story: '朝天门，长江和嘉陵江在这里交汇，像两条巨龙相会。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/a2f583b5ca9b88ad810ac66439308bc8.jpg', title: '千厮门大桥', date: '2025.07.03', location: '重庆市', story: '千厮门大桥横跨嘉陵江，连通两岸的繁华与烟火。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/25f925ae0fa2abb0a9ef288d909e6d60.jpg', title: '川美后街', date: '2025.07.03', location: '重庆市', story: '川美的后街，是涂鸦的世界，也是艺术的海洋。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/6b11b14461a5c37236989327ee85201a.jpg', title: '我与朝天门', date: '2025.07.03', location: '重庆市', story: '在朝天门前留影，背后是两江交汇的壮阔。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/64fbf8ddb7c4d91a7e626ae6e015c5be.jpg', title: '新重庆人', date: '2025.07.03', location: '重庆市', story: '作为一个新重庆人，我正在慢慢爱上这座8D魔幻城市。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/d13589a9656bc36f6df12595b866d5d3.jpg', title: '朝天门下', date: '2025.07.03', location: '重庆市', story: '站在朝天门下，仰望这座城市的天际线。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/e34c4c1df91707233e05cdea86a16e07.jpg', title: '打卡观音桥', date: '2025.07.03', location: '重庆市', story: '观音桥的繁华，是重庆商业活力的最好证明。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/c276102b6ff2e4595791af64c8e3ba5f.jpg', title: '赛博朋克', date: '2025.07.03', location: '重庆市', story: '重庆的夜景，就是现实版的赛博朋克。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/63c22bdc78e6c08df88f19ec5c1578cb.jpeg', title: '初遇长江', date: '2025.07.03', location: '重庆市', story: '第一次近距离看长江，波涛汹涌，气势磅礴。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/f233af9044368d00121e65cd293d87e2.jpeg', title: '重庆之夜', date: '2025.07.03', location: '重庆市', story: '重庆的夜，是火锅的热气与江风的清凉交织。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/99346e99cd9024eff1e0915a73ee0bcb.jpeg', title: '你好重庆', date: '2025.07.03', location: '重庆市', story: '重庆，你好。这座山城的魅力，让我流连忘返。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/ebacafa33de2b56e9d459c753697604d.jpeg', title: '解放碑', date: '2025.07.03', location: '重庆市', story: '解放碑，重庆的城市地标，见证了这座城市的变迁。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/212682f5196ae9c8f1ccc07586b2c150.jpeg', title: '易烊千玺', date: '2025.07.03', location: '重庆市', story: 'TFBOYS的易烊千玺，是重庆这座城市孕育的明星。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/93bcd175333ab766e1a381885b18e2f2.jpeg', title: '回归重庆', date: '2025.11.30', location: '重庆市', story: '再次回到重庆，这座城市的烟火气让我感到温暖。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/3baed1ef05dc31a43484ff8ab087a693.jpeg', title: '江北城', date: '2025.11.30', location: '重庆市', story: '江北城的新旧交替，是重庆城市发展的缩影。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/118f6373f5dfecd42b2f0642b9af2eb2.jpeg', title: '园博园', date: '2025.11.05', location: '重庆市', story: '重庆园博园，浓缩了全国园林的精华。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/1330ef23064f250ae82804d2c523ffd8.jpeg', title: '重庆雅典', date: '2025.11.12', location: '重庆市', story: '在重庆发现了一处像雅典卫城的地方，古今交融。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/8d8566e4f1c697c1c70cb932d243aea5.jpeg', title: '魁北克落日', date: '2025.11.12', location: '魁北克', story: '魁北克的落日，把整座城市染成了金红色。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/102d1449218659b3b7504e6a171ee292.jpeg', title: '飞过重庆', date: '2025.11.30', location: '重庆市', story: '从飞机上俯瞰重庆，这座山水之城如同一幅泼墨画。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/8cf5fbcc0b948db889e281b89ec3735f.jpeg', title: 'Cyberpunk', date: '2025.12.20', location: '重庆市', story: '重庆的夜景，是现实中的Cyberpunk世界。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/c5aff9e385d9b4fe686ee8ad46950960.jpeg', title: '烟火重庆', date: '2026.01.01', location: '重庆市', story: '跨年夜的重庆，满城烟火，照亮了新年的希望。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/abf44fd43094a0ddc0200b1c2dc4f821.jpeg', title: '爱乐之城', date: '2026.03.20', location: '重庆市', story: '重庆，一座来了就不想走的城市，我的爱乐之城。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/bd0ef4310c82a2b3aefd5fb6795711d7.jpeg', title: '相守重庆', date: '2026.03.20', location: '重庆市', story: '在重庆，我找到了属于自己的生活方式。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/e30737d60085d086c9ac849b73692f09.jpeg', title: '江北嘴', date: '2025.07.03', location: '重庆市', story: '江北嘴的夜景，是重庆最浪漫的存在。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/622fb90e513e10d20f4458143dfa425a.jpeg', title: '野餐时刻', date: '2025.08.03', location: '重庆市', story: '在重庆的某个公园，和朋友们的野餐时光。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/8444e28323bb4df71e1478a6e4eaef9e.jpeg', title: '热浪', date: '2025.08.02', location: '重庆市', story: '重庆的八月，热浪滚滚，却挡不住我探索的热情。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/fef660834241d651cca34d97075fe18a.jpeg', title: '欧式风味', date: '2025.11.01', location: '重庆市', story: '在重庆发现了一处欧式风情的角落，别有一番韵味。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/12ca5fbe70221bc0eb718fbf823ca165.jpeg', title: '万圣节快乐', date: '2025.11.01', location: '重庆市', story: '万圣节的重庆，游乐园里充满了欢乐与惊悚。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/5fb8f532849f6a6d55c31a0d357d1fd6.jpeg', title: '万圣之夜', date: '2025.11.01', location: '重庆市', story: '万圣之夜的狂欢，是年轻人释放压力的最好方式。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/f40a5795f9b8c15ac16bd649149a82a5.jpeg', title: '雾都城堡', date: '2025.11.01', location: '重庆市', story: '雾都的城堡，在迷雾中若隐若现，如同一座梦幻之城。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/9ff153ff107901ed789cd6e1099a8bc4.jpeg', title: 'Cosplay', date: '2026.01.20', location: '重庆市', story: 'Cosplay的世界里，每个人都可以成为自己想成为的人。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/140fbe0c928dfe61f6bd08ef16d31078.jpg', title: '九月九日', date: '2025.09.09', location: '重庆市', story: '九月九日，登高的日子，我在重庆的山城步道上。' }
+        ];
+
+        // 插画板块数据
+        const homeIllustrationsData = [
+            { src: 'https://bee-reg-ab.imagency.cn/e/8b4f0e8091010e15821f38dcbd484e77.png', title: '列宁附体', date: '2026年', story: '同人艺术创作，致敬经典。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/67df8a07ef77be17594a1954b0ec31be.png', title: '提灯埋案', date: '2026年', story: '油画风格作品，深夜的执灯人。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/49a725577362d37e09d0deeadae5e33b.png', title: '沉思', date: '2026年', story: '现代插画设计，安静的思考者。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/42cc1cd4193cf349aab49a43a9d6fe64.png', title: '太阳之子', date: '2026年', story: '剪影风格作品，光明的守护者。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/3040a416140a335199c228746cfc3dad.png', title: '一意孤行', date: '2026年', story: '现代插画设计，执着的追梦人。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/624e8fe89605700cec4df9f3a6b49d27.png', title: '革命者', date: '2026年', story: '油画风格作品，燃烧的理想。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/284621381b3c143d2ddfe00ff8e0de75.png', title: '革命领袖', date: '2026年', story: '同人艺术创作，历史的巨人。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/4501b2ab4a7e99ebad5cb694a8c252f9.png', title: '第三人称', date: '2026年', story: '现代插画设计，另一种视角。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/a3b1909b14dda4f75d5d135413989338.png', title: '日落', date: '2026年', story: '剪影风格作品，余晖中的剪影。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/7b6e219971739c3075c20a758f221f78.png', title: '学生和老师们', date: '2026年', story: '油画风格作品，校园的记忆。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/f8ebe5abe13529a57728e7c1060e835e.png', title: '渴望原谅', date: '2026年', story: '油画风格作品，灵魂的忏悔。' },
+            { src: 'https://bee-reg-ab.imagency.cn/e/02c7516f9528920a277c622c890d8e7d.png', title: '创业团队', date: '2026年', story: '现代插画设计，并肩作战的伙伴。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/c183a4c709773481fdc25a535aa25086.jpg', title: '前仆后继', date: '2026年', story: '现代插画设计，一代又一代人的接力。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/e4782068b70294f9826be008eacb528d.png', title: '苏式重工业朋克', date: '2026年', story: '现代插画设计，致敬那个火红的年代。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/20ebb65014e1d28883cfce3d760f06dc.png', title: '急先锋', date: '2026年', story: '现代插画设计，冲在最前的人。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/3750e3b30e3893630658a32f700434f0.png', title: '共同的理想', date: '2026年', story: '现代插画设计，为了同一个梦想而奋斗。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/105140087619be9d17ec8f51b0498f76.png', title: '日漫风', date: '2026年', story: '现代插画设计，二次元的世界也很精彩。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/5c23b2e6cedeb353b380de8397183b04.png', title: '漫画版肖像', date: '2026年', story: '现代插画设计，用画笔定格瞬间。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/7453ee25b67b3ce89f46d6c62cf87159.png', title: '请罪', date: '2026年', story: '油画风格作品，历史的反思。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/8a37d09e9f5ae77a0bafa5a188739d87.png', title: '理想世界', date: '2026年', story: '现代插画设计，心中的乌托邦。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/4b71b7ca394c95bbef8fbff1c821e20c.png', title: '雨夜', date: '2026年', story: '油画风格作品，雨中的思绪。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/4647f402c14f030a598eca8a52046d4d.png', title: '荒野大革命', date: '2026年', story: '现代插画设计，在荒野中寻找出路。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/60ff27bab6dba3e9e2ca895269377b7e.png', title: '新专辑', date: '2026年', story: '现代插画设计，艺术家的新作品。' },
+            { src: 'https://i.imgs.ovh/2026/06/12/c709b19a292b8030e289b2a13714a6ce.png', title: '信息革命', date: '2026年', story: '现代插画设计，数字时代的浪潮。' }
+        ];
+
+        // Fisher-Yates洗牌算法
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        // 初始化主页画廊
+        function initHomeGallery() {
+            const galleryGrid = document.getElementById('homeGalleryGrid');
+            if (!galleryGrid) return;
+
+            // 合并瞬间和插画数据
+            const allData = [
+                ...homeMomentsData.map(item => ({ ...item, type: 'moments' })),
+                ...homeIllustrationsData.map(item => ({ ...item, type: 'illustrations' }))
+            ];
+
+            // 随机选取6张
+            const shuffled = shuffleArray(allData);
+            const selected = shuffled.slice(0, 6);
+
+            // 更新DOM
+            const items = galleryGrid.querySelectorAll('.gallery-item');
+            items.forEach((item, index) => {
+                const data = selected[index];
+                const imageDiv = item.querySelector('.gallery-image');
+                const textP = item.querySelector('p');
+
+                // 设置背景图片
+                imageDiv.style.backgroundImage = `url(${data.src})`;
+                imageDiv.style.backgroundSize = 'cover';
+                imageDiv.style.backgroundPosition = 'center';
+
+                // 存储数据
+                imageDiv.dataset.type = data.type;
+                imageDiv.dataset.title = data.title;
+                imageDiv.dataset.src = data.src;
+                imageDiv.dataset.date = data.date;
+                imageDiv.dataset.location = data.location || '';
+
+                // 设置标题
+                textP.textContent = data.title;
+            });
+
+            // 添加点击事件 - 跳转到gallery.html并打开弹窗
+            galleryGrid.addEventListener('click', function(e) {
+                const imageDiv = e.target.closest('.gallery-image');
+                if (imageDiv && imageDiv.dataset.type) {
+                    const { type, title, src, date, location } = imageDiv.dataset;
+                    // 编码参数并跳转（story从gallery.html的数据库获取）
+                    const params = new URLSearchParams({
+                        openModal: 'true',
+                        type: type,
+                        title: title,
+                        src: src,
+                        date: date,
+                        location: location || ''
+                    });
+                    window.location.href = `gallery.html?${params.toString()}`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
